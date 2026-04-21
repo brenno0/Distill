@@ -1,0 +1,4 @@
+distill/
+__pycache__/
+*.pyc
+backend/data/chroma/

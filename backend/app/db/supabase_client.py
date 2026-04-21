@@ -87,5 +87,16 @@ class TranscriptionRepository:
         )
         return result.data[0] if result.data else None
 
+    async def delete(self, transcription_id: str) -> bool:
+        if not self._db:
+            return True
+        result = (
+            self._db.table(self.TABLE)
+            .delete()
+            .eq("id", transcription_id)
+            .execute()
+        )
+        return bool(result.data)
+
 
 transcription_repo = TranscriptionRepository()

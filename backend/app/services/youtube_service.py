@@ -3,6 +3,7 @@ import uuid
 from app.services.youtube_processor import youtube_processor
 from app.services.whisper_processor import whisper_processor
 from app.services.knowledge_base_manager import kb_manager
+from app.services.summary_service import summary_service
 from app.core.ws_manager import ws_manager
 from app.db.supabase_client import transcription_repo
 from app.models.transcription import TranscriptionType, TranscriptionStatus
@@ -42,13 +43,22 @@ class YouTubeService:
                 text=result["text"],
                 metadata={"type": "youtube", "url": url, "title": audio_info["title"]},
             )
+            summary = ""
+            try:
+                summary = await summary_service.generate(result["text"])
+            except Exception:
+                logging.exception("Summary generation failed for %s", transcription_id)
+
+            payload = {
+                "status": TranscriptionStatus.COMPLETED,
+                "text": result["text"],
+                "title": audio_info["title"],
+            }
+            if summary:
+                payload["summary"] = summary
             await transcription_repo.update(
                 transcription_id,
-                {
-                    "status": TranscriptionStatus.COMPLETED,
-                    "text": result["text"],
-                    "title": audio_info["title"],
-                },
+                payload,
             )
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:

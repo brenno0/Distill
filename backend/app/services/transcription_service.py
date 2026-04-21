@@ -1,8 +1,12 @@
+import logging
 from app.services.whisper_processor import whisper_processor
 from app.services.knowledge_base_manager import kb_manager
+from app.services.summary_service import summary_service
 from app.core.ws_manager import ws_manager
 from app.db.supabase_client import transcription_repo
 from app.models.transcription import TranscriptionStatus
+
+logger = logging.getLogger(__name__)
 
 
 class TranscriptionService:
@@ -29,9 +33,18 @@ class TranscriptionService:
                 text=result["text"],
                 metadata={"type": "meeting", "audio_path": audio_path},
             )
+            summary = ""
+            try:
+                summary = await summary_service.generate(result["text"])
+            except Exception:
+                logger.exception("Summary generation failed for %s", transcription_id)
+
+            payload = {"status": TranscriptionStatus.COMPLETED, "text": result["text"]}
+            if summary:
+                payload["summary"] = summary
             await transcription_repo.update(
                 transcription_id,
-                {"status": TranscriptionStatus.COMPLETED, "text": result["text"]},
+                payload,
             )
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:
@@ -48,8 +61,8 @@ class TranscriptionService:
 
     async def delete(self, transcription_id: str) -> dict:
         chunks = kb_manager.delete_transcription(transcription_id)
-        await transcription_repo.update(transcription_id, {"status": "deleted"})
-        return {"deleted_chunks": chunks}
+        deleted = await transcription_repo.delete(transcription_id)
+        return {"deleted_chunks": chunks, "deleted": deleted}
 
 
 transcription_service = TranscriptionService()
