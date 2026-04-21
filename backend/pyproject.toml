@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "distill-backend"
+version = "1.0.0"
+description = "Distill AI backend — transcription, summarization and RAG"
+authors = ["Brenno"]
+readme = "README.md"
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.13"
+fastapi = "*"
+uvicorn = {version = "*", extras = ["standard"]}
+websockets = "*"
+pydantic = "*"
+pydantic-settings = "*"
+supabase = "*"
+psycopg2-binary = "*"
+sounddevice = "*"
+soundfile = "*"
+numpy = "*"
+whisperx = "*"
+ollama = "*"
+openai = "*"
+anthropic = "*"
+google-generativeai = "*"
+langchain = "*"
+langchain-community = "*"
+langchain-ollama = "*"
+langchain-openai = "*"
+langchain-anthropic = "*"
+langchain-google-genai = "*"
+langgraph = "*"
+chromadb = "*"
+notion-client = "*"
+slack-sdk = "*"
+keyring = "*"
+secretstorage = "*"
+httpx = "*"
+python-dotenv = "*"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+pytest-asyncio = "*"
+pytest-mock = "*"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
