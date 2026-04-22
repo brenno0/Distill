@@ -15,7 +15,7 @@ class AppSettingsRepository:
         result = self._db.table(self.TABLE).select("*").eq("id", True).limit(1).execute()
         return result.data[0] if result.data else None
 
-    async def upsert(self, provider: str, model: str) -> dict:
+    async def upsert(self, provider: str, model: str, audio: dict | None = None) -> dict:
         if not self._db:
             return {
                 "id": True,
@@ -27,6 +27,8 @@ class AppSettingsRepository:
             "default_llm_provider": provider,
             "default_llm_model": model,
         }
+        if audio:
+            payload["audio"] = audio
         result = self._db.table(self.TABLE).upsert(payload).execute()
         return result.data[0] if result.data else payload
 

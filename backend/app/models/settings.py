@@ -2,6 +2,13 @@ from pydantic import BaseModel
 from typing import Optional
 
 
+class AudioConfig(BaseModel):
+    input_device: int | None = None
+    output_device: int | None = None
+    input_device_name: str | None = None
+    output_device_name: str | None = None
+
+
 class LLMConfig(BaseModel):
     provider: str = "ollama"
     model: str = "llama3.1:8b"
@@ -33,6 +40,7 @@ class AppSettingsUpdate(BaseModel):
     integrations: Optional[IntegrationsConfig] = None
     secrets: Optional[SecretsConfig] = None
     theme: Optional[str] = None  # "auto" | "dark" | "light"
+    audio: Optional[AudioConfig] = None
 
 
 class AppSettingsResponse(BaseModel):
@@ -48,3 +56,4 @@ class AppSettingsResponse(BaseModel):
     has_anthropic_key: bool = False
     has_notion_key: bool = False
     has_slack_token: bool = False
+    audio: AudioConfig = AudioConfig()

@@ -1,16 +1,22 @@
 from fastapi import APIRouter
-from app.models.settings import AppSettingsUpdate, AppSettingsResponse, LLMConfig, IntegrationsConfig
+from app.models.settings import AppSettingsUpdate, AppSettingsResponse, LLMConfig, IntegrationsConfig, AudioConfig
 from app.core.config import settings as app_settings, set_secret, get_secret
+from app.db.app_settings_repository import app_settings_repo
 
 router = APIRouter()
 
 
-@router.get("/", response_model=AppSettingsResponse)
-async def get_settings():
-    """
-    Retorna configurações. API keys retornam apenas flag de presença (bool),
-    nunca o valor — previne exposição via devtools ou logs.
-    """
+async def _build_response() -> AppSettingsResponse:
+    persisted = await app_settings_repo.get()
+    audio_cfg = AudioConfig()
+    if persisted and persisted.get("audio"):
+        raw = persisted["audio"]
+        audio_cfg = AudioConfig(
+            input_device=raw.get("input_device"),
+            output_device=raw.get("output_device"),
+            input_device_name=raw.get("input_device_name"),
+            output_device_name=raw.get("output_device_name"),
+        )
     return AppSettingsResponse(
         llm=LLMConfig(
             provider=app_settings.default_llm_provider,
@@ -30,10 +36,20 @@ async def get_settings():
         has_anthropic_key=bool(get_secret("ANTHROPIC_API_KEY")),
         has_notion_key=bool(get_secret("NOTION_API_KEY")),
         has_slack_token=bool(get_secret("SLACK_BOT_TOKEN")),
+        audio=audio_cfg,
     )
 
 
-@router.put("/")
+@router.get("/", response_model=AppSettingsResponse)
+async def get_settings():
+    """
+    Retorna configurações. API keys retornam apenas flag de presença (bool),
+    nunca o valor — previne exposição via devtools ou logs.
+    """
+    return await _build_response()
+
+
+@router.put("/", response_model=AppSettingsResponse)
 async def update_settings(body: AppSettingsUpdate):
     """
     Credenciais vão para o keyring. Configurações não-sensíveis atualizam
@@ -58,8 +74,24 @@ async def update_settings(body: AppSettingsUpdate):
             if hasattr(app_settings, field):
                 setattr(app_settings, field, value)
 
+    audio_data = None
+    if body.audio:
+        audio_data = body.audio.model_dump(exclude_none=True)
+
     if body.llm:
+        await app_settings_repo.upsert(
+            provider=body.llm.provider,
+            model=body.llm.model,
+            audio=audio_data,
+        )
         app_settings.default_llm_provider = body.llm.provider
         app_settings.default_llm_model = body.llm.model
+    elif audio_data:
+        persisted = await app_settings_repo.get()
+        await app_settings_repo.upsert(
+            provider=persisted.get("default_llm_provider", "ollama") if persisted else "ollama",
+            model=persisted.get("default_llm_model", "llama3.1:8b") if persisted else "llama3.1:8b",
+            audio=audio_data,
+        )
 
-    return {"message": "Settings updated"}
+    return await _build_response()

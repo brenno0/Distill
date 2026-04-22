@@ -17,11 +17,12 @@ class AudioRecorder:
     SAMPLE_RATE = 16000
     CHANNELS = 1
 
-    def __init__(self):
+    def __init__(self, input_device: int | None = None):
         self.is_recording = False
         self._frames: list[np.ndarray] = []
         self._stream: sd.InputStream | None = None
         self._output_path: str = ""
+        self._input_device: int | None = input_device
 
     def start_recording(self) -> str:
         """
@@ -43,6 +44,7 @@ class AudioRecorder:
                 self._frames.append(indata.copy())
 
         self._stream = sd.InputStream(
+            device=self._input_device,
             samplerate=self.SAMPLE_RATE,
             channels=self.CHANNELS,
             callback=_callback,
