@@ -4,6 +4,7 @@ from app.services.knowledge_base_manager import kb_manager
 from app.services.summary_service import summary_service
 from app.core.ws_manager import ws_manager
 from app.db.supabase_client import transcription_repo
+from app.db import library_repository
 from app.models.transcription import TranscriptionStatus
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,12 @@ class TranscriptionService:
             await transcription_repo.update(
                 transcription_id,
                 payload,
+            )
+            record = await transcription_repo.get(transcription_id)
+            await library_repository.library_repo.upsert_item_for_transcription(
+                transcription_id=transcription_id,
+                display_name=record.get("title") or transcription_id,
+                thumbnail_url=record.get("thumbnail_url"),
             )
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:

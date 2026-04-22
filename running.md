@@ -28,6 +28,12 @@ Edite o `.env` e preencha no mínimo:
 - `SUPABASE_ANON_KEY`
 - `DATABASE_URL`
 
+Configuração de LLM via UI:
+
+- Provider/modelo padrão ficam persistidos no banco (tabela `app_settings`) e sobrevivem reinício.
+- API keys (OpenAI/Google/Anthropic etc.) são salvas no keyring do sistema (criptografado), não em texto no banco.
+- A transcrição de áudio (STT) continua sendo feita pelo WhisperX local.
+
 Instale dependências:
 
 ```bash

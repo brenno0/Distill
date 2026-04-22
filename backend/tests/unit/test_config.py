@@ -1,4 +1,4 @@
-from app.core.config import settings
+from app.core.config import settings, Settings
 
 
 def test_settings_has_bootstrap_fields():
@@ -12,8 +12,9 @@ def test_settings_has_bootstrap_fields():
 
 
 def test_whisper_defaults():
-    assert settings.whisper_model == "large-v3"
-    assert settings.whisper_device == "cuda"
+    defaults = Settings(_env_file=None)
+    assert defaults.whisper_model == "large-v3"
+    assert defaults.whisper_device == "cuda"
 
 
 def test_ollama_default_url():

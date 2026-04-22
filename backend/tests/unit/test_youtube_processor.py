@@ -25,7 +25,26 @@ async def test_extract_audio_raises_on_invalid_url():
 @pytest.mark.asyncio
 async def test_extract_audio_raises_on_ytdlp_failure():
     p = YouTubeProcessor()
-    mock_result = MagicMock(returncode=1, stderr="Video unavailable")
-    with patch("subprocess.run", return_value=mock_result):
+    metadata_result = MagicMock(returncode=0, stdout='{"title":"Video"}')
+    download_result = MagicMock(returncode=1, stderr="Video unavailable")
+
+    with patch("subprocess.run", side_effect=[metadata_result, download_result]):
         with pytest.raises(RuntimeError, match="yt-dlp failed"):
             await p.extract_audio("https://www.youtube.com/watch?v=test")
+
+
+@pytest.mark.asyncio
+async def test_extract_audio_returns_thumbnail_and_title_from_metadata():
+    p = YouTubeProcessor()
+    metadata_result = MagicMock(
+        returncode=0,
+        stdout='{"title":"Sample Video","thumbnail":"https://img.youtube.com/test.jpg"}',
+    )
+    download_result = MagicMock(returncode=0)
+
+    with patch("subprocess.run", side_effect=[metadata_result, download_result]):
+        result = await p.extract_audio("https://www.youtube.com/watch?v=test")
+
+    assert result["title"] == "Sample Video"
+    assert result["thumbnail_url"] == "https://img.youtube.com/test.jpg"
+    assert result["audio_path"].endswith(".wav")

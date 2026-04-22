@@ -2,7 +2,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.endpoints import recordings, transcriptions, youtube, ollama, agent, settings
+from app.api.v1.endpoints import recordings, transcriptions, youtube, ollama, agent, settings, library
 from app.api.v1.endpoints.ws import router as ws_router
 from app.core.config import settings as app_settings
 
@@ -27,6 +27,7 @@ app.include_router(youtube.router,        prefix="/api/v1/youtube",        tags=
 app.include_router(ollama.router,         prefix="/api/v1/ollama",         tags=["ollama"])
 app.include_router(agent.router,          prefix="/api/v1/agent",          tags=["agent"])
 app.include_router(settings.router,       prefix="/api/v1/settings",       tags=["settings"])
+app.include_router(library.router,        prefix="/api/v1/library",        tags=["library"])
 app.include_router(ws_router)
 
 
@@ -34,7 +35,13 @@ app.include_router(ws_router)
 async def startup():
     Path(app_settings.temp_dir).mkdir(parents=True, exist_ok=True)
     from app.db.migrations import run_migrations
+    from app.db.app_settings_repository import app_settings_repo
+
     run_migrations(app_settings.database_url)
+    persisted = await app_settings_repo.get()
+    if persisted:
+        app_settings.default_llm_provider = persisted["default_llm_provider"]
+        app_settings.default_llm_model = persisted["default_llm_model"]
 
 
 @app.get("/health")

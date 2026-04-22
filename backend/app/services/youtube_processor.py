@@ -1,3 +1,4 @@
+import json
 import subprocess
 import uuid
 import os
@@ -42,6 +43,22 @@ class YouTubeProcessor:
         if progress_callback:
             await progress_callback("youtube_download_start", {"url": url, "progress": 0})
 
+        metadata_result = subprocess.run(
+            ["yt-dlp", "--dump-single-json", "--no-playlist", url],
+            capture_output=True,
+            text=True,
+        )
+        if metadata_result.returncode != 0:
+            raise RuntimeError(f"yt-dlp metadata failed: {metadata_result.stderr}")
+
+        try:
+            metadata = json.loads(metadata_result.stdout or "{}")
+        except json.JSONDecodeError as exc:
+            raise RuntimeError("yt-dlp metadata parse failed") from exc
+
+        title = (metadata.get("title") or "").strip() or f"YouTube Video {uid}"
+        thumbnail_url = metadata.get("thumbnail")
+
         result = subprocess.run(
             [
                 "yt-dlp",
@@ -65,16 +82,10 @@ class YouTubeProcessor:
                 "youtube_download_complete", {"progress": 100, "path": output_wav}
             )
 
-        title_result = subprocess.run(
-            ["yt-dlp", "--get-title", "--no-playlist", url],
-            capture_output=True,
-            text=True,
-        )
-        title = title_result.stdout.strip() or f"YouTube Video {uid}"
-
         return {
             "audio_path": output_wav,
             "title": title,
+            "thumbnail_url": thumbnail_url,
             "url": url,
             "transcription_id": uid,
         }

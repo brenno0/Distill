@@ -6,6 +6,7 @@ from app.services.knowledge_base_manager import kb_manager
 from app.services.summary_service import summary_service
 from app.core.ws_manager import ws_manager
 from app.db.supabase_client import transcription_repo
+from app.db.library_repository import library_repo
 from app.models.transcription import TranscriptionType, TranscriptionStatus
 
 
@@ -59,6 +60,11 @@ class YouTubeService:
             await transcription_repo.update(
                 transcription_id,
                 payload,
+            )
+            await library_repo.upsert_item_for_transcription(
+                transcription_id=transcription_id,
+                display_name=audio_info["title"],
+                thumbnail_url=audio_info.get("thumbnail_url"),
             )
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:
