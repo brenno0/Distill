@@ -23,6 +23,9 @@ class LibraryService:
     async def list_items(self, folder_id: str) -> list[dict]:
         return await library_repository.library_repo.list_items(folder_id=folder_id)
 
+    async def list_folder_tree(self) -> list[dict]:
+        return await library_repository.library_repo.list_folder_tree()
+
     async def rename_item(self, item_id: str, display_name: str) -> dict:
         return await library_repository.library_repo.rename_item(item_id=item_id, display_name=display_name)
 

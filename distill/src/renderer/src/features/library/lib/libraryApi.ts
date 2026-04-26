@@ -37,7 +37,7 @@ export const getLibraryApi = () => {
     return axiosInstance<unknown>({
       url: `/api/v1/library/folders/${folderId}/move`,
       method: 'POST',
-      data: { parent_id: parentId },
+      data: { new_parent_id: parentId },
     })
   }
 

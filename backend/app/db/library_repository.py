@@ -310,7 +310,7 @@ class LibraryRepository:
             .select(
                 "id,transcription_id,folder_id,display_name,thumbnail_url,"
                 "created_at,updated_at,"
-                "transcriptions(title,summary,status)",
+                "transcriptions(title,summary,status,transcription_type)",
             )
             .eq("folder_id", folder_id)
             .order("created_at", desc=True)
@@ -319,9 +319,10 @@ class LibraryRepository:
         return [
             {
                 **item,
-                "title": item.get("transcriptions", {}).get("title"),
-                "summary": item.get("transcriptions", {}).get("summary"),
-                "status": item.get("transcriptions", {}).get("status"),
+                "title": (item.get("transcriptions") or {}).get("title"),
+                "summary": (item.get("transcriptions") or {}).get("summary"),
+                "status": (item.get("transcriptions") or {}).get("status"),
+                "transcription_type": (item.get("transcriptions") or {}).get("transcription_type"),
             }
             for item in (result.data or [])
         ]

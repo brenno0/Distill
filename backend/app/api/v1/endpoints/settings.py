@@ -74,9 +74,7 @@ async def update_settings(body: AppSettingsUpdate):
             if hasattr(app_settings, field):
                 setattr(app_settings, field, value)
 
-    audio_data = None
-    if body.audio:
-        audio_data = body.audio.model_dump(exclude_none=True)
+    audio_data = body.audio.model_dump() if body.audio is not None else None
 
     if body.llm:
         await app_settings_repo.upsert(
@@ -86,7 +84,7 @@ async def update_settings(body: AppSettingsUpdate):
         )
         app_settings.default_llm_provider = body.llm.provider
         app_settings.default_llm_model = body.llm.model
-    elif audio_data:
+    elif audio_data is not None:
         persisted = await app_settings_repo.get()
         await app_settings_repo.upsert(
             provider=persisted.get("default_llm_provider", "ollama") if persisted else "ollama",

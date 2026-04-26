@@ -1,5 +1,5 @@
 export type WsEvent = {
-  type: string
+  event: string
   data: Record<string, unknown>
 }
 
@@ -7,8 +7,11 @@ type WsCallback = (event: WsEvent) => void
 
 class WsManager {
   private connections = new Map<string, WebSocket>()
+  private callbacks = new Map<string, WsCallback>()
 
   connect(transcriptionId: string, onEvent: WsCallback): WebSocket {
+    this.callbacks.set(transcriptionId, onEvent)
+
     if (this.connections.has(transcriptionId)) {
       return this.connections.get(transcriptionId)!
     }
@@ -18,8 +21,8 @@ class WsManager {
     ws.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data) as WsEvent
-        onEvent(event)
-        if (event.type === 'pipeline_complete' || event.type === 'pipeline_error') {
+        this.callbacks.get(transcriptionId)?.(event)
+        if (event.event === 'pipeline_complete' || event.event === 'pipeline_error') {
           this.disconnect(transcriptionId)
         }
       } catch {
@@ -28,7 +31,7 @@ class WsManager {
     }
 
     ws.onerror = () => {
-      onEvent({ type: 'pipeline_error', data: { error: 'WebSocket error' } })
+      this.callbacks.get(transcriptionId)?.({ event: 'pipeline_error', data: { error: 'WebSocket error' } })
       this.disconnect(transcriptionId)
     }
 
@@ -41,6 +44,7 @@ class WsManager {
     if (ws) {
       ws.close()
       this.connections.delete(transcriptionId)
+      this.callbacks.delete(transcriptionId)
     }
   }
 }

@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react'
-import { Copy } from 'lucide-react'
+import { Copy, Loader2 } from 'lucide-react'
 
 interface Segment { text: string; start: number; end: number; speaker?: string }
 interface SegmentBlock { text: string; start: number; end: number; speaker?: string }
@@ -11,9 +11,13 @@ function fmt(s: number) {
 export const TranscriptPanel = memo(function TranscriptPanel({
   segments,
   fullText,
+  status,
+  progress,
 }: {
   segments: Segment[]
   fullText?: string
+  status?: string
+  progress?: number | null
 }) {
   const blocks = useMemo<SegmentBlock[]>(() => {
     if (segments.length === 0) return []
@@ -95,6 +99,28 @@ export const TranscriptPanel = memo(function TranscriptPanel({
                       {paragraph}
                     </p>
                   ))}
+                </div>
+              )
+            : (status === 'pending' || status === 'processing')
+            ? (
+                <div className="flex flex-col items-center justify-center h-full gap-4 text-white/40 py-16">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <p className="text-sm">Transcribing…</p>
+                  {progress != null && (
+                    <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-accent)] transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            : status === 'failed'
+            ? (
+                <div className="flex flex-col items-center justify-center h-full gap-2 py-16">
+                  <p className="text-sm text-red-400">Transcription failed</p>
+                  <p className="text-xs text-white/30">Check the backend logs for details</p>
                 </div>
               )
             : <p className="text-sm text-white/30 text-center mt-8">No transcript available</p>}

@@ -27,7 +27,7 @@ class AppSettingsRepository:
             "default_llm_provider": provider,
             "default_llm_model": model,
         }
-        if audio:
+        if audio is not None:
             payload["audio"] = audio
         result = self._db.table(self.TABLE).upsert(payload).execute()
         return result.data[0] if result.data else payload

@@ -1,6 +1,6 @@
 import { Suspense, useRef, useEffect, useState, useMemo } from 'react'
 import { gsap } from 'gsap'
-import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, type DragEndEvent } from '@dnd-kit/core'
+import { DndContext, DragOverlay, useSensor, useSensors, PointerSensor, pointerWithin, rectIntersection, type DragEndEvent, type CollisionDetection } from '@dnd-kit/core'
 import { Folder } from 'lucide-react'
 import { useLibrary } from './hooks/useLibrary'
 import { LibraryFilters } from './components/LibraryFilters'
@@ -51,6 +51,12 @@ function LibraryContent() {
       activationConstraint: { distance: 8 },
     }),
   )
+
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointer = pointerWithin(args)
+    if (pointer.length > 0) return pointer
+    return rectIntersection(args)
+  }
 
   const allFolders = useMemo(() => flattenFolders(folders), [folders])
   const selectedFolder = useMemo(
@@ -116,7 +122,7 @@ function LibraryContent() {
     const { mode, folder: targetFolder, itemId } = dialogState
     const m = mode as string
     if (m === 'create') {
-      createFolder({ name, parent_id: parentId ?? null })
+      createFolder({ name, parent_id: dialogState.parentId ?? null })
     } else if (m === 'rename' && targetFolder) {
       renameFolder({ folderId: targetFolder.id, name })
     } else if (m === 'move' && targetFolder) {
@@ -142,7 +148,7 @@ function LibraryContent() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={({ active }) => setActiveData(active.data.current as DragData)} onDragEnd={handleDragEnd} onDragCancel={() => setActiveData(null)}>
+    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragStart={({ active }) => setActiveData(active.data.current as DragData)} onDragEnd={handleDragEnd} onDragCancel={() => setActiveData(null)}>
       <div className="flex h-full min-h-0 overflow-hidden">
         <FolderTreeSidebar
           folders={folders}
@@ -193,15 +199,23 @@ function LibraryContent() {
         </div>
         </div>
       </div>
-      <DragOverlay dropAnimation={null}>
-        {activeData?.type === 'item' && (
-          <div className="bg-card border border-primary rounded-md shadow-lg p-4 text-sm text-foreground opacity-90">
-            {items.find(i => i.id === activeData.id)?.display_name ?? items.find(i => i.id === activeData.id)?.title ?? 'Recording'}
-          </div>
-        )}
+      <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
+        {activeData?.type === 'item' && (() => {
+          const item = items.find(i => i.id === activeData.id)
+          return (
+            <div className="bg-card border border-primary/60 rounded-lg shadow-2xl px-3 py-2 text-sm text-foreground flex items-center gap-2 rotate-1 scale-105">
+              <div className="w-10 h-7 rounded overflow-hidden shrink-0 bg-muted flex items-center justify-center">
+                {item?.thumbnail_url
+                  ? <img src={item.thumbnail_url} className="w-full h-full object-cover" />
+                  : <Folder className="h-3 w-3 text-muted-foreground" />}
+              </div>
+              <span className="truncate max-w-[180px]">{item?.display_name ?? item?.title ?? 'Recording'}</span>
+            </div>
+          )
+        })()}
         {activeData?.type === 'folder' && (
-          <div className="bg-card border border-primary rounded-md shadow-lg px-3 py-1.5 text-sm text-foreground opacity-90 flex items-center gap-2">
-            <Folder className="h-4 w-4" />
+          <div className="bg-card border border-primary/60 rounded-lg shadow-2xl px-3 py-2 text-sm text-foreground flex items-center gap-2 rotate-1 scale-105">
+            <Folder className="h-4 w-4 text-primary" />
             {allFolders.find(f => f.id === activeData.id)?.name ?? 'Folder'}
           </div>
         )}

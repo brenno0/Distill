@@ -38,6 +38,11 @@ export function useLibrary() {
     queryFn: () => libraryApi.listItemsByFolder(effectiveSelectedFolderId as string),
     enabled: Boolean(effectiveSelectedFolderId),
     retry: false,
+    refetchInterval: (query) => {
+      const items: any[] = (query.state.data as any)?.items ?? []
+      const hasActive = items.some((i) => i.status === 'pending' || i.status === 'processing')
+      return hasActive ? 3000 : false
+    },
   })
 
   const createFolderMutation = useMutation({

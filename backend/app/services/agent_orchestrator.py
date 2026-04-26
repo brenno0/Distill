@@ -98,6 +98,21 @@ class AgentOrchestrator:
             kb_tool,
         ]
 
+    async def _get_transcript_context(self, transcription_id: str) -> str:
+        """Fetch transcript text from DB for direct context injection."""
+        try:
+            from app.db.supabase_client import transcription_repo
+            record = await transcription_repo.get(transcription_id)
+            if record and record.get("text"):
+                text = record["text"]
+                title = record.get("title", transcription_id)
+                if len(text) > 24000:
+                    text = f"{text[:16000]}\n...[truncated]...\n{text[-8000:]}"
+                return f"Title: {title}\n\n{text}"
+        except Exception:
+            pass
+        return ""
+
     async def process(
         self,
         user_message: str,
@@ -116,7 +131,30 @@ class AgentOrchestrator:
 
         agent = create_react_agent(llm, tools, prompt=SYSTEM_PROMPT)
 
-        result = await agent.ainvoke({"messages": [("human", user_message)]})
+        # Inject transcript text directly so LLM can answer even when KB is empty
+        augmented_message = user_message
+        if transcription_id:
+            context = await self._get_transcript_context(transcription_id)
+            if context:
+                augmented_message = (
+                    f"[TRANSCRIPT CONTEXT]\n{context}\n\n"
+                    f"[USER QUESTION]\n{user_message}"
+                )
+
+        result = await agent.ainvoke({"messages": [("human", augmented_message)]})
+
+        def _extract_text(content) -> str:
+            if isinstance(content, str):
+                return content
+            if isinstance(content, list):
+                parts = []
+                for block in content:
+                    if isinstance(block, str):
+                        parts.append(block)
+                    elif isinstance(block, dict):
+                        parts.append(block.get("text") or block.get("content") or "")
+                return "\n".join(p for p in parts if p)
+            return str(content)
 
         messages = result.get("messages", [])
         final_response = ""
@@ -126,7 +164,7 @@ class AgentOrchestrator:
                 for tc in msg.tool_calls:
                     steps.append({"tool": tc["name"], "input": tc["args"], "output": ""})
             elif hasattr(msg, "content") and msg.content and not getattr(msg, "tool_calls", None):
-                final_response = msg.content if isinstance(msg.content, str) else str(msg.content)
+                final_response = _extract_text(msg.content)
 
         return {
             "response": final_response,

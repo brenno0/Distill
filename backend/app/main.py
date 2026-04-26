@@ -42,8 +42,10 @@ async def startup():
         run_migrations(app_settings.database_url)
         persisted = await app_settings_repo.get()
         if persisted:
-            app_settings.default_llm_provider = persisted["default_llm_provider"]
-            app_settings.default_llm_model = persisted["default_llm_model"]
+            if persisted.get("default_llm_provider"):
+                app_settings.default_llm_provider = persisted["default_llm_provider"]
+            if persisted.get("default_llm_model"):
+                app_settings.default_llm_model = persisted["default_llm_model"]
     except Exception:
         pass  # DB not available — API still serves OpenAPI spec
 

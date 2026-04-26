@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { animate, stagger } from 'animejs'
 import { gsap } from 'gsap'
+import { Mic } from 'lucide-react'
 import { RecordingCard } from './RecordingCard'
 import type { LibraryFolder, LibraryItem } from '../types'
 
@@ -49,6 +50,15 @@ export function RecordingList({
         ease: 'power2.out',
       })
     }
+  }
+
+  if (recordings.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48 gap-3 text-muted-foreground">
+        <Mic className="h-10 w-10 opacity-20" />
+        <p className="text-sm">No recordings here yet</p>
+      </div>
+    )
   }
 
   if (viewMode === 'grid') {

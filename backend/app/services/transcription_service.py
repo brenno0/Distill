@@ -29,30 +29,41 @@ class TranscriptionService:
                 transcription_id=transcription_id,
                 progress_callback=send,
             )
-            await kb_manager.ingest_transcription(
-                transcription_id=transcription_id,
-                text=result["text"],
-                metadata={"type": "meeting", "audio_path": audio_path},
+
+            # Save text immediately — KB/summary failures must not block this
+            await transcription_repo.update(
+                transcription_id,
+                {"status": TranscriptionStatus.COMPLETED, "text": result["text"]},
             )
+
+            try:
+                await kb_manager.ingest_transcription(
+                    transcription_id=transcription_id,
+                    text=result["text"],
+                    metadata={"type": "meeting", "audio_path": audio_path},
+                )
+            except Exception:
+                logger.exception("KB ingestion failed for %s", transcription_id)
+
             summary = ""
             try:
                 summary = await summary_service.generate(result["text"])
             except Exception:
                 logger.exception("Summary generation failed for %s", transcription_id)
 
-            payload = {"status": TranscriptionStatus.COMPLETED, "text": result["text"]}
             if summary:
-                payload["summary"] = summary
-            await transcription_repo.update(
-                transcription_id,
-                payload,
-            )
+                await transcription_repo.update(transcription_id, {"summary": summary})
+
             record = await transcription_repo.get(transcription_id)
-            await library_repository.library_repo.upsert_item_for_transcription(
-                transcription_id=transcription_id,
-                display_name=record.get("title") or transcription_id,
-                thumbnail_url=record.get("thumbnail_url"),
-            )
+            try:
+                await library_repository.library_repo.upsert_item_for_transcription(
+                    transcription_id=transcription_id,
+                    display_name=(record or {}).get("title") or transcription_id,
+                    thumbnail_url=(record or {}).get("thumbnail_url"),
+                )
+            except Exception:
+                logger.exception("Library upsert failed for %s", transcription_id)
+
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:
             await transcription_repo.update(

@@ -39,33 +39,44 @@ class YouTubeService:
                 transcription_id=transcription_id,
                 progress_callback=send,
             )
-            await kb_manager.ingest_transcription(
-                transcription_id=transcription_id,
-                text=result["text"],
-                metadata={"type": "youtube", "url": url, "title": audio_info["title"]},
+
+            # Save text immediately — KB/summary failures must not block this
+            await transcription_repo.update(
+                transcription_id,
+                {
+                    "status": TranscriptionStatus.COMPLETED,
+                    "text": result["text"],
+                    "title": audio_info["title"],
+                },
             )
+
+            try:
+                await kb_manager.ingest_transcription(
+                    transcription_id=transcription_id,
+                    text=result["text"],
+                    metadata={"type": "youtube", "url": url, "title": audio_info["title"]},
+                )
+            except Exception:
+                logging.exception("KB ingestion failed for %s", transcription_id)
+
             summary = ""
             try:
                 summary = await summary_service.generate(result["text"])
             except Exception:
                 logging.exception("Summary generation failed for %s", transcription_id)
 
-            payload = {
-                "status": TranscriptionStatus.COMPLETED,
-                "text": result["text"],
-                "title": audio_info["title"],
-            }
             if summary:
-                payload["summary"] = summary
-            await transcription_repo.update(
-                transcription_id,
-                payload,
-            )
-            await library_repo.upsert_item_for_transcription(
-                transcription_id=transcription_id,
-                display_name=audio_info["title"],
-                thumbnail_url=audio_info.get("thumbnail_url"),
-            )
+                await transcription_repo.update(transcription_id, {"summary": summary})
+
+            try:
+                await library_repo.upsert_item_for_transcription(
+                    transcription_id=transcription_id,
+                    display_name=audio_info["title"],
+                    thumbnail_url=audio_info.get("thumbnail_url"),
+                )
+            except Exception:
+                logging.exception("Library upsert failed for %s", transcription_id)
+
             await send("pipeline_complete", {"transcription_id": transcription_id})
         except Exception as e:
             logging.exception("YouTube pipeline error for %s", transcription_id)

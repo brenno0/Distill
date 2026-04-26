@@ -14,7 +14,6 @@ class AudioRecorder:
     e reduz uso de VRAM durante a inferência.
     """
 
-    SAMPLE_RATE = 16000
     CHANNELS = 1
 
     def __init__(self, input_device: int | None = None):
@@ -23,6 +22,14 @@ class AudioRecorder:
         self._stream: sd.InputStream | None = None
         self._output_path: str = ""
         self._input_device: int | None = input_device
+        self._samplerate: int = 16000
+
+    def _device_samplerate(self) -> int:
+        try:
+            info = sd.query_devices(self._input_device)
+            return int(info['default_samplerate'])
+        except Exception:
+            return 16000
 
     def start_recording(self) -> str:
         """
@@ -34,6 +41,7 @@ class AudioRecorder:
 
         self.is_recording = True
         self._frames = []
+        self._samplerate = self._device_samplerate()
         Path(settings.temp_dir).mkdir(parents=True, exist_ok=True)
         self._output_path = os.path.join(
             settings.temp_dir, f"meeting_{uuid.uuid4().hex[:8]}.wav"
@@ -45,7 +53,7 @@ class AudioRecorder:
 
         self._stream = sd.InputStream(
             device=self._input_device,
-            samplerate=self.SAMPLE_RATE,
+            samplerate=self._samplerate,
             channels=self.CHANNELS,
             callback=_callback,
             dtype=np.float32,
@@ -56,7 +64,7 @@ class AudioRecorder:
     def stop_recording(self) -> str:
         """
         Para o stream, concatena todos os frames gravados e salva WAV.
-        Retorna o caminho do arquivo final.
+        whisperx.load_audio() resamples to 16kHz via ffmpeg automatically.
         """
         if not self.is_recording:
             raise RuntimeError("Not recording")
@@ -68,7 +76,7 @@ class AudioRecorder:
 
         if self._frames:
             audio_data = np.concatenate(self._frames, axis=0)
-            sf.write(self._output_path, audio_data, self.SAMPLE_RATE)
+            sf.write(self._output_path, audio_data, self._samplerate)
 
         return self._output_path
 

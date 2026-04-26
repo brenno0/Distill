@@ -1,10 +1,10 @@
 import { memo, useEffect, useState, type MouseEvent } from 'react'
 import { useDraggable } from '@dnd-kit/core'
 import { Link } from '@tanstack/react-router'
-import { Calendar, Pencil, Play, Trash2 } from 'lucide-react'
+import { Calendar, GripVertical, Mic, Pencil, Play, PlayCircle, Trash2 } from 'lucide-react'
 import { Card, CardContent } from '@renderer/components/ui/card'
-import { Badge } from '@renderer/components/ui/badge'
 import { Button } from '@renderer/components/ui/button'
+import { cn } from '@renderer/lib/utils'
 import type { LibraryItem, LibraryFolder, DragData } from '../types'
 
 interface Props {
@@ -38,13 +38,27 @@ export const RecordingCard = memo(function RecordingCard({
     data: { type: 'item', id, folderId: recording.folder_id ?? null } satisfies DragData,
   })
   const [thumbnailFailed, setThumbnailFailed] = useState(false)
-  const date = new Date(recording.created_at).toLocaleDateString()
   const transcriptionId = recording.transcription_id ?? recording.id
   const displayName = recording.display_name ?? recording.title ?? 'Untitled Recording'
+  const isYoutube = recording.transcription_type === 'youtube' || Boolean(recording.thumbnail_url)
+
+  const date = (() => {
+    const d = new Date(recording.created_at)
+    const now = Date.now()
+    const diff = now - d.getTime()
+    if (diff < 60_000) return 'Just now'
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+    return d.toLocaleDateString()
+  })()
 
   useEffect(() => {
     setThumbnailFailed(false)
   }, [recording.thumbnail_url])
+
+  const handleLinkClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (isDragging) e.preventDefault()
+  }
 
   const handleDelete = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
@@ -71,59 +85,88 @@ export const RecordingCard = memo(function RecordingCard({
     </div>
   )
 
+  const statusClass = {
+    completed: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    failed: 'bg-red-500/20 text-red-400 border-red-500/30',
+    processing: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+    pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  }[recording.status ?? ''] ?? 'bg-muted text-muted-foreground'
+
+  const dragHandle = (
+    <div className="opacity-0 group-hover:opacity-60 transition-opacity shrink-0 p-1">
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+    </div>
+  )
+
   const actionButtons = (
-    <div className="absolute right-2 top-2 z-10 flex items-center gap-1">
+    <div className="flex items-center gap-1">
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="bg-black/40 hover:bg-black/60"
+        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
         onClick={handleRename}
-        title="Rename item"
+        title="Rename"
       >
-        <Pencil className="h-3.5 w-3.5 text-white" />
+        <Pencil className="h-3.5 w-3.5 text-white/60" />
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="bg-black/40 hover:bg-destructive/80"
+        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/30"
         onClick={handleDelete}
         disabled={isDeleting}
-        title="Delete recording"
+        title="Delete"
       >
-        <Trash2 className="h-3.5 w-3.5 text-white" />
+        <Trash2 className="h-3.5 w-3.5 text-white/60" />
       </Button>
     </div>
   )
+
+  const cardStyle = {
+    opacity: isDragging ? 0.3 : undefined,
+    transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined,
+  }
 
   if (viewMode === 'list') {
     return (
       <Card
         ref={(el) => { setNodeRef(el); cardRef?.(el) }}
-        className="bg-card border-border overflow-hidden cursor-grab active:cursor-grabbing transition-colors relative"
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-        style={{ opacity: isDragging ? 0.4 : undefined, transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined }}
         {...listeners}
         {...attributes}
+        className="group bg-card border-border overflow-hidden hover:border-primary/40 transition-colors relative cursor-grab active:cursor-grabbing"
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        style={{ ...cardStyle, touchAction: 'none' }}
       >
-        {actionButtons}
-        <Link to="/transcription/$id" params={{ id: transcriptionId }}>
-          <CardContent className="p-4 flex items-center gap-4">
-            <div className="w-32 aspect-video rounded overflow-hidden shrink-0">{thumbnail}</div>
+        <CardContent className="p-3 flex items-center gap-3">
+          {dragHandle}
+          <Link
+            to="/transcription/$id"
+            params={{ id: transcriptionId }}
+            className="flex items-center gap-3 flex-1 min-w-0"
+            onClick={handleLinkClick}
+          >
+            <div className="w-24 aspect-video rounded overflow-hidden shrink-0">{thumbnail}</div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-medium text-foreground truncate mb-1">{displayName}</h3>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  {date}
-                </span>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                {isYoutube
+                  ? <PlayCircle className="h-3 w-3 shrink-0 text-red-400" />
+                  : <Mic className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                <h3 className="text-sm font-medium text-foreground truncate">{displayName}</h3>
               </div>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                {date}
+              </span>
             </div>
-            <Badge variant="secondary">{recording.status}</Badge>
-          </CardContent>
-        </Link>
+            <span className={cn('text-xs px-2 py-0.5 rounded-full border font-medium shrink-0', statusClass)}>
+              {recording.status}
+            </span>
+          </Link>
+          {actionButtons}
+        </CardContent>
       </Card>
     )
   }
@@ -131,31 +174,39 @@ export const RecordingCard = memo(function RecordingCard({
   return (
     <Card
       ref={(el) => { setNodeRef(el); cardRef?.(el) }}
-      className="bg-card border-border overflow-hidden cursor-grab active:cursor-grabbing group hover:border-primary/50 transition-colors relative"
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      style={{ opacity: isDragging ? 0.4 : undefined, transform: transform ? `translate3d(${transform.x}px,${transform.y}px,0)` : undefined }}
       {...listeners}
       {...attributes}
+      className="group bg-card border-border overflow-hidden hover:border-primary/50 transition-colors relative cursor-grab active:cursor-grabbing"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      style={{ ...cardStyle, touchAction: 'none' }}
     >
-      {actionButtons}
-      <Link to="/transcription/$id" params={{ id: transcriptionId }}>
+      <Link to="/transcription/$id" params={{ id: transcriptionId }} onClick={handleLinkClick}>
         <div className="relative aspect-video bg-muted">{thumbnail}</div>
-        <CardContent className="p-4">
-          <h3 className="font-medium text-foreground truncate mb-1">{displayName}</h3>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {date}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 mt-3">
-            <Badge variant="secondary" className="text-xs">
-              {recording.status}
-            </Badge>
-          </div>
-        </CardContent>
       </Link>
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2">
+          {dragHandle}
+          <Link to="/transcription/$id" params={{ id: transcriptionId }} className="flex-1 min-w-0" onClick={handleLinkClick}>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              {isYoutube
+                ? <PlayCircle className="h-3 w-3 shrink-0 text-red-400" />
+                : <Mic className="h-3 w-3 shrink-0 text-muted-foreground" />}
+              <h3 className="text-sm font-medium text-foreground truncate">{displayName}</h3>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                {date}
+              </span>
+              <span className={cn('text-xs px-2 py-0.5 rounded-full border font-medium', statusClass)}>
+                {recording.status}
+              </span>
+            </div>
+          </Link>
+          {actionButtons}
+        </div>
+      </CardContent>
     </Card>
   )
 })

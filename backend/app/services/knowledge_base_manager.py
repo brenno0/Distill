@@ -1,8 +1,10 @@
+import logging
 import chromadb
 from typing import Optional
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings
-from app.core.config import settings
+from app.core.config import settings, get_secret
+
+logger = logging.getLogger(__name__)
 
 
 class KnowledgeBaseManager:
@@ -17,7 +19,8 @@ class KnowledgeBaseManager:
     def __init__(self):
         self._client: chromadb.PersistentClient | None = None
         self._collection: chromadb.Collection | None = None
-        self._embeddings: OllamaEmbeddings | None = None
+        self._embeddings = None
+        self._embeddings_provider: str | None = None
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=200,
@@ -33,12 +36,32 @@ class KnowledgeBaseManager:
             )
         return self._collection
 
-    def _get_embeddings(self) -> OllamaEmbeddings:
-        if self._embeddings is None:
-            self._embeddings = OllamaEmbeddings(
+    def _get_embeddings(self):
+        provider = settings.default_llm_provider
+        if self._embeddings is not None and self._embeddings_provider == provider:
+            return self._embeddings
+
+        if provider == "gemini":
+            from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/text-embedding-004",
+                google_api_key=get_secret("GOOGLE_API_KEY"),
+            )
+        elif provider == "openai":
+            from langchain_openai import OpenAIEmbeddings
+            embeddings = OpenAIEmbeddings(
+                model="text-embedding-3-small",
+                openai_api_key=get_secret("OPENAI_API_KEY"),
+            )
+        else:
+            from langchain_ollama import OllamaEmbeddings
+            embeddings = OllamaEmbeddings(
                 model="nomic-embed-text",
                 base_url=settings.ollama_base_url,
             )
+
+        self._embeddings = embeddings
+        self._embeddings_provider = provider
         return self._embeddings
 
     async def ingest_transcription(
@@ -70,18 +93,27 @@ class KnowledgeBaseManager:
         """
         Busca por similaridade de cosseno.
         where=None retorna resultado global; where={"transcription_id": id} filtra por sessão.
+        Returns empty list if embeddings unavailable (Ollama not running / model not pulled).
         """
-        collection = self._get_collection()
-        embedder = self._get_embeddings()
-        query_embedding = await embedder.aembed_query(query_text)
+        try:
+            collection = self._get_collection()
+            embedder = self._get_embeddings()
+            query_embedding = await embedder.aembed_query(query_text)
+        except Exception:
+            logger.warning("KB query unavailable — embeddings failed (is nomic-embed-text pulled?)")
+            return []
 
         where = {"transcription_id": transcription_id} if transcription_id else None
-        results = collection.query(
-            query_embeddings=[query_embedding],
-            n_results=n_results,
-            where=where,
-            include=["documents", "metadatas", "distances"],
-        )
+        try:
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=n_results,
+                where=where,
+                include=["documents", "metadatas", "distances"],
+            )
+        except Exception:
+            logger.warning("ChromaDB query failed for transcription_id=%s", transcription_id)
+            return []
 
         return [
             {

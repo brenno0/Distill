@@ -37,7 +37,7 @@ author: Brenno
 
 ### 2.2. Camada de Lógica de Negócio (Backend - Python)
 
-*   **Tecnologias:** Python 3.9+, FastAPI (para API REST e WebSockets), `sounddevice`, `ollama` (SDK), `google-generativeai` (SDK), `openai` (SDK), `anthropic` (SDK), `langchain`, `langgraph`, `smtplib`, `notion-client`, `slack_sdk`, `chromadb` (ou similar para Vector DB).
+*   **Tecnologias:** Python 3.9+, FastAPI (para API REST e WebSockets), `sounddevice`, `ollama` (SDK), `google-generativeai` (SDK), `openai` (SDK), `anthropic` (SDK), `langchain`, `langgraph`, `smtplib`, `notion-client`, `slack_sdk`, `chromadb`, poetry (ou similar para Vector DB).
 *   **Responsabilidades:**
     *   Orquestração de todos os fluxos de trabalho (gravação, transcrição, resumo, integração, consulta a transcrições persistidas).
     *   Gerenciamento e interação com LLMs (Ollama, Gemini, OpenAI, Anthropic), permitindo seleção dinâmica de provedores e modelos.

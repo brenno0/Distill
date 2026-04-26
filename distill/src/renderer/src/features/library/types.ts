@@ -14,6 +14,7 @@ export interface LibraryItem {
   title?: string | null
   summary?: string | null
   status: string
+  transcription_type?: 'meeting' | 'youtube' | null
   created_at: string
   thumbnail_url?: string | null
 }

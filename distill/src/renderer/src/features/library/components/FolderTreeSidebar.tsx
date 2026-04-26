@@ -1,3 +1,4 @@
+import { memo, useState } from 'react'
 import { ChevronRight, Folder, FolderOpen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
@@ -19,7 +20,7 @@ interface FolderNodeProps {
   draggingFolderId?: string | null
 }
 
-function FolderNode({
+const FolderNode = memo(function FolderNode({
   folder,
   level,
   selectedFolderId,
@@ -34,6 +35,7 @@ function FolderNode({
 }: FolderNodeProps) {
   const isSelected = selectedFolderId === folder.id
   const children = folder.children ?? []
+  const [isOpen, setIsOpen] = useState(true)
 
   const { attributes, listeners, setNodeRef: setDragRef, transform: dragTransform, isDragging } = useDraggable({
     id: `folder-${folder.id}`,
@@ -48,10 +50,10 @@ function FolderNode({
     <li ref={setRef}>
       <div
         className={cn(
-          'group flex items-center gap-1 rounded-md px-2 py-1.5 transition-colors cursor-grab active:cursor-grabbing',
+          'group flex items-center gap-1 rounded-md px-2 py-1.5 transition-all cursor-grab active:cursor-grabbing',
           isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50',
-          isOver && 'bg-primary/20 border border-primary',
-          isDragging && 'opacity-50',
+          isOver && 'bg-primary/20 ring-1 ring-primary ring-inset scale-[1.02]',
+          isDragging && 'opacity-30',
         )}
         style={{ paddingLeft: `${Math.min(level * 12 + 8, 32)}px`, transform: dragTransform ? CSS.Translate.toString(dragTransform) : undefined }}
         {...listeners}
@@ -59,11 +61,18 @@ function FolderNode({
       >
         <button
           type="button"
-          onClick={() => onSelect(folder.id)}
+          onClick={(e) => { e.stopPropagation(); onSelect(folder.id) }}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
           disabled={isMutating}
         >
-          <ChevronRight className={cn('h-3.5 w-3.5 text-muted-foreground', children.length === 0 && 'opacity-0')} />
+          <ChevronRight
+            className={cn(
+              'h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform',
+              children.length === 0 && 'opacity-0 pointer-events-none',
+              isOpen && children.length > 0 && 'rotate-90',
+            )}
+            onClick={(e) => { e.stopPropagation(); setIsOpen((v) => !v) }}
+          />
           {isSelected ? <FolderOpen className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />}
           <span className="truncate text-sm">{folder.name}</span>
           {draggingCount !== undefined && draggingCount > 0 && (
@@ -119,7 +128,7 @@ function FolderNode({
         </div>
       </div>
 
-      {children.length > 0 ? (
+      {children.length > 0 && isOpen ? (
         <ul className="space-y-0.5">
           {children.map((child) => (
             <FolderNode
@@ -141,7 +150,7 @@ function FolderNode({
       ) : null}
     </li>
   )
-}
+})
 
 interface FolderTreeSidebarProps {
   folders: LibraryFolder[]
