@@ -16,7 +16,7 @@ class WsManager {
       return this.connections.get(transcriptionId)!
     }
 
-    const ws = new WebSocket(`ws://localhost:8000/ws/${transcriptionId}`)
+    const ws = new WebSocket(`ws://localhost:47821/ws/${transcriptionId}`)
 
     ws.onmessage = (e) => {
       try {

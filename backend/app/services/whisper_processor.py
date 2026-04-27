@@ -1,3 +1,4 @@
+import gc
 from datetime import datetime, UTC
 from typing import Callable, Optional, Awaitable, Any
 from app.core.config import settings
@@ -117,13 +118,20 @@ class WhisperProcessor:
                 },
             )
 
-        return {
+        result_data = {
             "id": transcription_id,
             "text": full_text,
             "segments": segments,
             "language": language,
             "transcribed_at": datetime.now(UTC).isoformat(),
         }
+
+        gc.collect()
+        if settings.whisper_device == "cuda":
+            import torch
+            torch.cuda.empty_cache()
+
+        return result_data
 
 
 whisper_processor = WhisperProcessor()

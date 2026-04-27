@@ -20,7 +20,7 @@ export class BackendManager extends EventEmitter {
 
   constructor() {
     super()
-    ipcMain.handle('backend:port', () => 8000)
+    ipcMain.handle('backend:port', () => 47821)
   }
 
   private resolveBackendPath(): string {
@@ -43,7 +43,7 @@ export class BackendManager extends EventEmitter {
     this.setStatus('starting')
     webContents?.send('backend:status', 'starting')
 
-    this.process = spawn('poetry', ['run', 'uvicorn', 'app.main:app', '--port', '8000'], {
+    this.process = spawn('poetry', ['run', 'uvicorn', 'app.main:app', '--port', '47821'], {
       cwd: backendPath,
       stdio: 'pipe'
     })
@@ -80,7 +80,7 @@ export class BackendManager extends EventEmitter {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/health')
+      const res = await fetch('http://localhost:47821/health')
       if (res.ok) {
         const payload = (await res.json()) as { status?: string; version?: string }
         if (payload.status !== 'ok') {

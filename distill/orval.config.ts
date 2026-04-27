@@ -2,7 +2,7 @@ import { defineConfig } from 'orval'
 
 export default defineConfig({
   distill: {
-    input: 'http://localhost:8000/openapi.json',
+    input: 'http://localhost:47821/openapi.json',
     output: {
       mode: 'tags-split',
       target: 'src/renderer/src/lib/api/generated',
