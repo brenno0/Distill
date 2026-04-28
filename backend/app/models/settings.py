@@ -8,6 +8,7 @@ class AudioConfig(BaseModel):
     input_device_name: str | None = None
     output_device_name: str | None = None
     monitor_source_name: str | None = None
+    mic_speaker_name: str | None = None
 
 
 class LLMConfig(BaseModel):

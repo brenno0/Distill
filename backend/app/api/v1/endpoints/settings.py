@@ -16,6 +16,8 @@ async def _build_response() -> AppSettingsResponse:
             output_device=raw.get("output_device"),
             input_device_name=raw.get("input_device_name"),
             output_device_name=raw.get("output_device_name"),
+            monitor_source_name=raw.get("monitor_source_name"),
+            mic_speaker_name=raw.get("mic_speaker_name"),
         )
     return AppSettingsResponse(
         llm=LLMConfig(

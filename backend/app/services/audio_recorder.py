@@ -147,6 +147,20 @@ class AudioRecorder:
 
         return self._output_path
 
+    def get_mic_chunk_since(self, last_idx: int) -> tuple[np.ndarray | None, int]:
+        """Returns mic frames accumulated since last_idx and the new index."""
+        frames = self._mic_frames[last_idx:]
+        if not frames:
+            return None, last_idx
+        return np.concatenate(frames, axis=0), last_idx + len(frames)
+
+    def get_monitor_chunk_since(self, last_idx: int) -> tuple[np.ndarray | None, int]:
+        """Returns monitor frames accumulated since last_idx and the new index."""
+        frames = self._monitor_frames[last_idx:]
+        if not frames:
+            return None, last_idx
+        return np.concatenate(frames, axis=0), last_idx + len(frames)
+
     def get_audio_level(self) -> float:
         if not self._mic_frames:
             return 0.0

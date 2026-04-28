@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from app.services.audio_recorder import AudioRecorder
+from app.services.streaming_transcriber import streaming_transcriber
 from app.db.supabase_client import transcription_repo
 from app.db.app_settings_repository import app_settings_repo
 from app.models.transcription import TranscriptionType, TranscriptionStatus
@@ -20,11 +21,13 @@ class RecordingService:
         transcription_id = str(uuid.uuid4())
         input_device = None
         monitor_source_name = None
+        mic_speaker_name = "Você"
         try:
             persisted = await app_settings_repo.get()
             audio_cfg = (persisted or {}).get("audio", {}) or {}
             input_device = audio_cfg.get("input_device")
             monitor_source_name = audio_cfg.get("monitor_source_name")
+            mic_speaker_name = audio_cfg.get("mic_speaker_name") or "Você"
         except Exception:
             pass
         self._recorder = AudioRecorder(
@@ -33,6 +36,12 @@ class RecordingService:
         )
         self._transcription_id = transcription_id
         audio_path = self._recorder.start_recording()
+        streaming_transcriber.start(
+            recorder=self._recorder,
+            transcription_id=transcription_id,
+            mic_speaker=mic_speaker_name,
+            monitor_speaker="Remoto",
+        )
         await transcription_repo.create({
             "id": transcription_id,
             "title": f"Recording {transcription_id[:8]}",
@@ -51,6 +60,7 @@ class RecordingService:
             raise RuntimeError("Not recording")
         transcription_id = self._transcription_id
         audio_path = self._recorder.stop_recording()
+        streaming_transcriber.stop()
         self._recorder = None
         self._transcription_id = None
         if transcription_id and audio_path:
