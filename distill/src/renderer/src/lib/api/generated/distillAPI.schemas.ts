@@ -40,6 +40,8 @@ export interface AudioConfig {
   output_device?: number | null;
   input_device_name?: string | null;
   output_device_name?: string | null;
+  monitor_source_name?: string | null;
+  mic_speaker_name?: string | null;
 }
 
 /**
@@ -217,4 +219,3 @@ limit?: number;
 export type ListItemsApiV1LibraryItemsGetParams = {
 folder_id: string;
 };
-

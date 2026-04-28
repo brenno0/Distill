@@ -59,6 +59,7 @@ function SettingsContent() {
             currentInputDevice={(settings as any)?.audio?.input_device}
             currentOutputDevice={(settings as any)?.audio?.output_device}
             currentMonitorSourceName={(settings as any)?.audio?.monitor_source_name}
+            currentMicSpeakerName={(settings as any)?.audio?.mic_speaker_name}
           />
         )}
 
