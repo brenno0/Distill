@@ -3,7 +3,8 @@ import { getAudio } from '@renderer/lib/api/generated/audio/audio'
 import { getSettings } from '@renderer/lib/api/generated/settings/settings'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@renderer/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
-import { useState, useEffect } from 'react'
+import { Input } from '@renderer/components/ui/input'
+import { useState, useEffect, useRef } from 'react'
 
 const audioApi = getAudio()
 const settingsApi = getSettings()
@@ -22,13 +23,21 @@ interface AudioDeviceSelectProps {
   currentInputDevice: number | null | undefined
   currentOutputDevice: number | null | undefined
   currentMonitorSourceName: string | null | undefined
+  currentMicSpeakerName: string | null | undefined
 }
 
-export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, currentMonitorSourceName }: AudioDeviceSelectProps) {
+export function AudioDeviceSelect({
+  currentInputDevice,
+  currentOutputDevice,
+  currentMonitorSourceName,
+  currentMicSpeakerName,
+}: AudioDeviceSelectProps) {
   const queryClient = useQueryClient()
   const [input, setInput] = useState<number | null>(null)
   const [output, setOutput] = useState<number | null>(null)
   const [monitor, setMonitor] = useState<string | null>(null)
+  const [micSpeakerName, setMicSpeakerName] = useState<string>('')
+  const lastSavedSpeakerRef = useRef<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['audio-devices'],
@@ -40,12 +49,22 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, cur
     if (currentInputDevice !== undefined) setInput(currentInputDevice ?? null)
     if (currentOutputDevice !== undefined) setOutput(currentOutputDevice ?? null)
     if (currentMonitorSourceName !== undefined) setMonitor(currentMonitorSourceName ?? null)
-  }, [currentInputDevice, currentOutputDevice, currentMonitorSourceName])
+    if (currentMicSpeakerName !== undefined) {
+      const value = currentMicSpeakerName ?? ''
+      setMicSpeakerName(value)
+      lastSavedSpeakerRef.current = value.trim() ? value.trim() : null
+    }
+  }, [currentInputDevice, currentOutputDevice, currentMonitorSourceName, currentMicSpeakerName])
 
   const saveMutation = useMutation({
     mutationFn: (payload: object) => settingsApi.updateSettingsApiV1SettingsPut(payload as any),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }),
   })
+
+  const normalizeSpeakerName = (value: string | null) => {
+    const trimmed = (value ?? '').trim()
+    return trimmed.length ? trimmed : null
+  }
 
   const buildPayload = (overrides: object) => ({
     audio: {
@@ -54,6 +73,7 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, cur
       output_device: output,
       output_device_name: (data as any)?.output?.find((d: AudioDevice) => d.id === output)?.name ?? null,
       monitor_source_name: monitor,
+      mic_speaker_name: normalizeSpeakerName(micSpeakerName),
       ...overrides,
     },
   })
@@ -76,6 +96,14 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, cur
     const id = sourceId === '__none__' ? null : sourceId
     setMonitor(id)
     saveMutation.mutate(buildPayload({ monitor_source_name: id }))
+  }
+
+  const commitMicSpeakerName = () => {
+    const normalized = normalizeSpeakerName(micSpeakerName)
+    if (normalized === lastSavedSpeakerRef.current) return
+    lastSavedSpeakerRef.current = normalized
+    setMicSpeakerName(normalized ?? '')
+    saveMutation.mutate(buildPayload({ mic_speaker_name: normalized }))
   }
 
   if (error) {
@@ -164,6 +192,25 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, cur
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Seu nome na transcrição</label>
+          <Input
+            value={micSpeakerName}
+            onChange={(e) => setMicSpeakerName(e.target.value)}
+            onBlur={commitMicSpeakerName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                commitMicSpeakerName()
+              }
+            }}
+            placeholder="Você"
+          />
+          <p className="text-xs text-muted-foreground">
+            Esse nome identifica o áudio do seu microfone na transcrição ao vivo.
+          </p>
         </div>
       </CardContent>
     </Card>

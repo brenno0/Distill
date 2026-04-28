@@ -24,16 +24,73 @@ class TranscriptionService:
             await transcription_repo.update(
                 transcription_id, {"status": TranscriptionStatus.PROCESSING}
             )
-            result = await whisper_processor.transcribe(
-                audio_path=audio_path,
-                transcription_id=transcription_id,
-                progress_callback=send,
-            )
+            record = await transcription_repo.get(transcription_id)
+            existing_metadata = (record or {}).get("metadata") or {}
+            metadata = dict(existing_metadata)
+            
+            # For meetings with mic/monitor paths, transcribe separately
+            if (
+                record
+                and record.get("transcription_type") == "meeting"
+                and metadata.get("mic_audio_path")
+                and metadata.get("monitor_audio_path")
+            ):
+                try:
+                    mic_result = await whisper_processor.transcribe(
+                        audio_path=metadata["mic_audio_path"],
+                        transcription_id=transcription_id,
+                        progress_callback=None,
+                    )
+                    monitor_result = await whisper_processor.transcribe(
+                        audio_path=metadata["monitor_audio_path"],
+                        transcription_id=transcription_id,
+                        progress_callback=None,
+                    )
+                    
+                    mic_speaker = metadata.get("mic_speaker_name", "Brenno")
+                    monitor_speaker = metadata.get("monitor_speaker_name", "Outros")
+                    
+                    mic_segments = [
+                        {**s, "speaker": mic_speaker, "speaker_type": "local"}
+                        for s in mic_result.get("segments", [])
+                    ]
+                    monitor_segments = [
+                        {**s, "speaker": monitor_speaker, "speaker_type": "remote"}
+                        for s in monitor_result.get("segments", [])
+                    ]
+                    
+                    merged = sorted(mic_segments + monitor_segments, key=lambda s: s.get("start", 0))
+                    full_text = " ".join(s.get("text", "").strip() for s in merged)
+                    
+                    result = {
+                        "text": full_text,
+                        "segments": merged,
+                        "language": mic_result.get("language", "pt"),
+                    }
+                except Exception as e:
+                    logger.exception("Mic/monitor transcription failed, falling back to mixed: %s", e)
+                    result = await whisper_processor.transcribe(
+                        audio_path=audio_path,
+                        transcription_id=transcription_id,
+                        progress_callback=send,
+                    )
+            else:
+                result = await whisper_processor.transcribe(
+                    audio_path=audio_path,
+                    transcription_id=transcription_id,
+                    progress_callback=send,
+                )
+            
+            metadata["segments"] = result.get("segments", [])
 
             # Save text immediately — KB/summary failures must not block this
             await transcription_repo.update(
                 transcription_id,
-                {"status": TranscriptionStatus.COMPLETED, "text": result["text"]},
+                {
+                    "status": TranscriptionStatus.COMPLETED,
+                    "text": result["text"],
+                    "metadata": metadata,
+                },
             )
 
             try:
@@ -54,7 +111,6 @@ class TranscriptionService:
             if summary:
                 await transcription_repo.update(transcription_id, {"summary": summary})
 
-            record = await transcription_repo.get(transcription_id)
             try:
                 await library_repository.library_repo.upsert_item_for_transcription(
                     transcription_id=transcription_id,
@@ -72,7 +128,14 @@ class TranscriptionService:
             await send("pipeline_error", {"transcription_id": transcription_id, "error": str(e)})
 
     async def get(self, transcription_id: str) -> dict | None:
-        return await transcription_repo.get(transcription_id)
+        record = await transcription_repo.get(transcription_id)
+        if not record:
+            return None
+        metadata = record.get("metadata") or {}
+        segments = metadata.get("segments") if isinstance(metadata, dict) else None
+        if segments is not None:
+            return {**record, "segments": segments}
+        return record
 
     async def list(self, limit: int = 50) -> list[dict]:
         return await transcription_repo.list(limit=limit)

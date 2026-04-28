@@ -14,6 +14,7 @@ function TranscriptionContent() {
   const segments = (t.segments ?? []) as Array<{
     text: string; start: number; end: number; speaker?: string
   }>
+  const transcriptionType = t.transcription_type as string | undefined
 
   if (isLoading) {
     return <TranscriptionPageSkeleton />
@@ -22,7 +23,13 @@ function TranscriptionContent() {
   return (
     <Group orientation="horizontal" className="h-full min-h-0">
       <Panel defaultSize={40} minSize={25} className="min-h-0">
-        <TranscriptPanel segments={segments} fullText={t.text} status={status} progress={progress} />
+        <TranscriptPanel
+          segments={segments}
+          fullText={t.text}
+          status={status}
+          progress={progress}
+          transcriptionType={transcriptionType}
+        />
       </Panel>
       <Separator className="w-1 bg-white/5 hover:bg-[var(--color-accent)]/30 transition-colors cursor-col-resize" />
       <Panel defaultSize={25} minSize={15} className="min-h-0">

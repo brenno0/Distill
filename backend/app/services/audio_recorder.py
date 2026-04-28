@@ -32,6 +32,8 @@ class AudioRecorder:
         self._mic_stream: sd.InputStream | None = None
         self._monitor_stream: sd.InputStream | None = None
         self._output_path: str = ""
+        self._mic_output_path: str | None = None
+        self._monitor_output_path: str | None = None
         self._samplerate: int = self.SAMPLERATE
 
     def _mic_device_info(self) -> tuple[int, int]:
@@ -75,6 +77,9 @@ class AudioRecorder:
         self._output_path = os.path.join(
             settings.temp_dir, f"meeting_{uuid.uuid4().hex[:8]}.wav"
         )
+        base, ext = os.path.splitext(self._output_path)
+        self._mic_output_path = f"{base}_mic{ext}"
+        self._monitor_output_path = f"{base}_monitor{ext}"
 
         def _mic_callback(indata: np.ndarray, frames: int, time, status) -> None:
             if self.is_recording:
@@ -122,9 +127,10 @@ class AudioRecorder:
 
         self.is_recording = False
 
-        self._mic_stream.stop()
-        self._mic_stream.close()
-        self._mic_stream = None
+        if self._mic_stream:
+            self._mic_stream.stop()
+            self._mic_stream.close()
+            self._mic_stream = None
 
         if self._monitor_stream:
             self._monitor_stream.stop()
@@ -134,10 +140,14 @@ class AudioRecorder:
         if self._mic_frames:
             mic = np.concatenate(self._mic_frames, axis=0)
             mic_mono = mic.mean(axis=1, keepdims=True)
+            if self._mic_output_path:
+                sf.write(self._mic_output_path, mic_mono, self._samplerate)
 
             if self._monitor_frames:
                 mon = np.concatenate(self._monitor_frames, axis=0)
                 mon_mono = mon.mean(axis=1, keepdims=True)
+                if self._monitor_output_path:
+                    sf.write(self._monitor_output_path, mon_mono, self._samplerate)
                 n = min(len(mic_mono), len(mon_mono))
                 mixed = (mic_mono[:n] + mon_mono[:n]) / 2.0
             else:
@@ -146,6 +156,16 @@ class AudioRecorder:
             sf.write(self._output_path, mixed, self._samplerate)
 
         return self._output_path
+
+    def get_mic_output_path(self) -> str | None:
+        if not self._mic_frames:
+            return None
+        return self._mic_output_path
+
+    def get_monitor_output_path(self) -> str | None:
+        if not self._monitor_frames:
+            return None
+        return self._monitor_output_path
 
     def get_mic_chunk_since(self, last_idx: int) -> tuple[np.ndarray | None, int]:
         """Returns mic frames accumulated since last_idx and the new index."""

@@ -61,6 +61,25 @@ class RecordingService:
         transcription_id = self._transcription_id
         audio_path = self._recorder.stop_recording()
         streaming_transcriber.stop()
+        
+        mic_path = self._recorder.get_mic_output_path()
+        monitor_path = self._recorder.get_monitor_output_path()
+        
+        metadata = {}
+        if mic_path:
+            metadata["mic_audio_path"] = mic_path
+        if monitor_path:
+            metadata["monitor_audio_path"] = monitor_path
+        
+        persisted = await app_settings_repo.get()
+        audio_cfg = (persisted or {}).get("audio", {}) or {}
+        mic_speaker_name = audio_cfg.get("mic_speaker_name") or "Brenno"
+        
+        if metadata:
+            metadata["mic_speaker_name"] = mic_speaker_name
+            metadata["monitor_speaker_name"] = "Outros"
+            await transcription_repo.update(transcription_id, {"metadata": metadata})
+        
         self._recorder = None
         self._transcription_id = None
         if transcription_id and audio_path:
