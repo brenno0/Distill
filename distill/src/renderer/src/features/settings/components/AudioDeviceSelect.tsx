@@ -13,15 +13,22 @@ interface AudioDevice {
   name: string
 }
 
+interface MonitorSource {
+  id: string
+  name: string
+}
+
 interface AudioDeviceSelectProps {
   currentInputDevice: number | null | undefined
   currentOutputDevice: number | null | undefined
+  currentMonitorSourceName: string | null | undefined
 }
 
-export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice }: AudioDeviceSelectProps) {
+export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice, currentMonitorSourceName }: AudioDeviceSelectProps) {
   const queryClient = useQueryClient()
   const [input, setInput] = useState<number | null>(null)
   const [output, setOutput] = useState<number | null>(null)
+  const [monitor, setMonitor] = useState<string | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['audio-devices'],
@@ -32,39 +39,43 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice }: A
   useEffect(() => {
     if (currentInputDevice !== undefined) setInput(currentInputDevice ?? null)
     if (currentOutputDevice !== undefined) setOutput(currentOutputDevice ?? null)
-  }, [currentInputDevice, currentOutputDevice])
+    if (currentMonitorSourceName !== undefined) setMonitor(currentMonitorSourceName ?? null)
+  }, [currentInputDevice, currentOutputDevice, currentMonitorSourceName])
 
   const saveMutation = useMutation({
     mutationFn: (payload: object) => settingsApi.updateSettingsApiV1SettingsPut(payload as any),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }),
   })
 
+  const buildPayload = (overrides: object) => ({
+    audio: {
+      input_device: input,
+      input_device_name: (data as any)?.input?.find((d: AudioDevice) => d.id === input)?.name ?? null,
+      output_device: output,
+      output_device_name: (data as any)?.output?.find((d: AudioDevice) => d.id === output)?.name ?? null,
+      monitor_source_name: monitor,
+      ...overrides,
+    },
+  })
+
   const handleInputChange = (deviceId: string) => {
     const id = deviceId === '__default__' ? null : Number(deviceId)
     setInput(id)
     const dev = (data as any)?.input?.find((d: AudioDevice) => d.id === id)
-    saveMutation.mutate({
-      audio: {
-        input_device: id,
-        input_device_name: dev?.name ?? null,
-        output_device: output,
-        output_device_name: (data as any)?.output?.find((d: AudioDevice) => d.id === output)?.name ?? null,
-      },
-    })
+    saveMutation.mutate(buildPayload({ input_device: id, input_device_name: dev?.name ?? null }))
   }
 
   const handleOutputChange = (deviceId: string) => {
     const id = deviceId === '__default__' ? null : Number(deviceId)
     setOutput(id)
     const dev = (data as any)?.output?.find((d: AudioDevice) => d.id === id)
-    saveMutation.mutate({
-      audio: {
-        input_device: input,
-        input_device_name: (data as any)?.input?.find((d: AudioDevice) => d.id === input)?.name ?? null,
-        output_device: id,
-        output_device_name: dev?.name ?? null,
-      },
-    })
+    saveMutation.mutate(buildPayload({ output_device: id, output_device_name: dev?.name ?? null }))
+  }
+
+  const handleMonitorChange = (sourceId: string) => {
+    const id = sourceId === '__none__' ? null : sourceId
+    setMonitor(id)
+    saveMutation.mutate(buildPayload({ monitor_source_name: id }))
   }
 
   if (error) {
@@ -79,6 +90,7 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice }: A
 
   const inputDevices: AudioDevice[] = (data as any)?.input ?? []
   const outputDevices: AudioDevice[] = (data as any)?.output ?? []
+  const monitorSources: MonitorSource[] = (data as any)?.monitors ?? []
 
   return (
     <Card>
@@ -106,6 +118,7 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice }: A
             </SelectContent>
           </Select>
         </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Auto-falantes</label>
           <Select
@@ -121,6 +134,32 @@ export function AudioDeviceSelect({ currentInputDevice, currentOutputDevice }: A
               {outputDevices.map((d) => (
                 <SelectItem key={d.id} value={String(d.id)}>
                   {d.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">
+            Capturar áudio do fone de ouvido
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Captura o que está tocando no fone — necessário para gravar reuniões
+          </p>
+          <Select
+            value={monitor ?? '__none__'}
+            onValueChange={handleMonitorChange}
+            disabled={isLoading}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={isLoading ? 'Carregando…' : 'Desativado'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">Desativado</SelectItem>
+              {monitorSources.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name}
                 </SelectItem>
               ))}
             </SelectContent>

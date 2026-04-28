@@ -19,13 +19,18 @@ class RecordingService:
     async def start(self) -> dict:
         transcription_id = str(uuid.uuid4())
         input_device = None
+        monitor_source_name = None
         try:
             persisted = await app_settings_repo.get()
             audio_cfg = (persisted or {}).get("audio", {}) or {}
             input_device = audio_cfg.get("input_device")
+            monitor_source_name = audio_cfg.get("monitor_source_name")
         except Exception:
             pass
-        self._recorder = AudioRecorder(input_device=input_device)
+        self._recorder = AudioRecorder(
+            input_device=input_device,
+            monitor_source_name=monitor_source_name,
+        )
         self._transcription_id = transcription_id
         audio_path = self._recorder.start_recording()
         await transcription_repo.create({
@@ -57,8 +62,10 @@ class RecordingService:
 
     def level(self) -> dict:
         if not self._recorder:
-            return {"level": 0.0}
-        return {"level": self._recorder.get_audio_level()}
+            return {"level": 0.0, "mic_level": 0.0, "monitor_level": 0.0}
+        mic = self._recorder.get_audio_level()
+        mon = self._recorder.get_monitor_level()
+        return {"level": mic, "mic_level": mic, "monitor_level": mon}
 
 
 recording_service = RecordingService()

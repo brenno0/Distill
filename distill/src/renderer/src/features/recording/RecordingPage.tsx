@@ -11,7 +11,7 @@ import { LiveTranscriptPreview } from "./components/LiveTranscriptPreview"
 
 export function RecordingPage() {
   const navigate = useNavigate()
-  const { isRecording, elapsedSeconds, audioLevel, transcriptionId, start, stop, isStarting, isStopping } =
+  const { isRecording, elapsedSeconds, audioLevel, monitorLevel, transcriptionId, start, stop, isStarting, isStopping } =
     useRecording()
 
   const containerRef = useRef<HTMLDivElement>(null)
@@ -66,7 +66,12 @@ export function RecordingPage() {
           </div>
         </div>
 
-        {isRecording && <VUMeter level={audioLevel} />}
+        {isRecording && (
+          <div className="flex items-end gap-6">
+            <VUMeter level={audioLevel} label="Microfone" />
+            <VUMeter level={monitorLevel} label={monitorLevel > 0 ? "Fone de ouvido" : "Fone de ouvido (inativo)"} />
+          </div>
+        )}
 
         <div ref={controlsRef}>
           <RecordingControls

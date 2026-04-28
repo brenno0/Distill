@@ -44,7 +44,7 @@ class KnowledgeBaseManager:
         if provider == "gemini":
             from langchain_google_genai import GoogleGenerativeAIEmbeddings
             embeddings = GoogleGenerativeAIEmbeddings(
-                model="models/text-embedding-004",
+                model="text-embedding-004",
                 google_api_key=get_secret("GOOGLE_API_KEY"),
             )
         elif provider == "openai":

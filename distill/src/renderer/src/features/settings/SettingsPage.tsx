@@ -58,6 +58,7 @@ function SettingsContent() {
           <AudioDeviceSelect
             currentInputDevice={(settings as any)?.audio?.input_device}
             currentOutputDevice={(settings as any)?.audio?.output_device}
+            currentMonitorSourceName={(settings as any)?.audio?.monitor_source_name}
           />
         )}
 

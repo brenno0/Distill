@@ -99,19 +99,24 @@ class GeminiProvider(LLMProvider):
     """
 
     def __init__(self, model: str = "gemini-2.0-flash", api_key: str = ""):
-        import google.generativeai as genai
-        genai.configure(api_key=api_key or get_secret("GOOGLE_API_KEY"))
-        self._genai = genai
+        from google import genai
+        self._client = genai.Client(api_key=api_key or get_secret("GOOGLE_API_KEY"))
         self.model = model
 
     async def generate(self, prompt: str, system: str = "") -> str:
-        m = self._genai.GenerativeModel(self.model, system_instruction=system or None)
-        resp = await m.generate_content_async(prompt)
+        from google.genai import types
+        config = types.GenerateContentConfig(system_instruction=system) if system else None
+        resp = await self._client.aio.models.generate_content(
+            model=self.model, contents=prompt, config=config
+        )
         return resp.text
 
     async def stream(self, prompt: str, system: str = "") -> AsyncGenerator[str, None]:
-        m = self._genai.GenerativeModel(self.model, system_instruction=system or None)
-        async for chunk in await m.generate_content_async(prompt, stream=True):
+        from google.genai import types
+        config = types.GenerateContentConfig(system_instruction=system) if system else None
+        async for chunk in self._client.aio.models.generate_content_stream(
+            model=self.model, contents=prompt, config=config
+        ):
             if chunk.text:
                 yield chunk.text
 
