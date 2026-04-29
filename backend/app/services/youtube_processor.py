@@ -1,3 +1,4 @@
+import asyncio
 import json
 import subprocess
 import uuid
@@ -6,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Callable, Optional, Awaitable
 from app.core.config import settings
+
+_PROGRESS_RE = re.compile(r'\[download\]\s+([\d.]+)%')
 
 
 class YouTubeProcessor:
@@ -59,28 +62,38 @@ class YouTubeProcessor:
         title = (metadata.get("title") or "").strip() or f"YouTube Video {uid}"
         thumbnail_url = metadata.get("thumbnail")
 
-        result = subprocess.run(
-            [
-                "yt-dlp",
-                "--extract-audio",
-                "--audio-format", "wav",
-                "--audio-quality", "0",
-                "--postprocessor-args", "ffmpeg:-ar 16000 -ac 1",
-                "--output", template,
-                "--no-playlist",
-                url,
-            ],
-            capture_output=True,
-            text=True,
+        proc = await asyncio.create_subprocess_exec(
+            "yt-dlp",
+            "--extract-audio",
+            "--audio-format", "wav",
+            "--audio-quality", "0",
+            "--postprocessor-args", "ffmpeg:-ar 16000 -ac 1",
+            "--output", template,
+            "--no-playlist",
+            "--newline",
+            url,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.PIPE,
         )
 
-        if result.returncode != 0:
-            raise RuntimeError(f"yt-dlp failed: {result.stderr}")
+        stderr_tail: list[str] = []
+        async for line in proc.stderr:  # type: ignore[union-attr]
+            decoded = line.decode("utf-8", errors="replace")
+            if len(stderr_tail) >= 20:
+                stderr_tail.pop(0)
+            stderr_tail.append(decoded)
+            if progress_callback:
+                m = _PROGRESS_RE.search(decoded)
+                if m:
+                    pct = float(m.group(1)) / 100.0
+                    await progress_callback("youtube_download_progress", {"progress": pct})
+
+        await proc.wait()
+        if proc.returncode != 0:
+            raise RuntimeError(f"yt-dlp failed: {''.join(stderr_tail)}")
 
         if progress_callback:
-            await progress_callback(
-                "youtube_download_complete", {"progress": 100, "path": output_wav}
-            )
+            await progress_callback("youtube_download_complete", {"progress": 1.0, "path": output_wav})
 
         return {
             "audio_path": output_wav,

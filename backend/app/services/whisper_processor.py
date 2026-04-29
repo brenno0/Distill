@@ -84,7 +84,7 @@ class WhisperProcessor:
         if progress_callback:
             await progress_callback(
                 "transcription_progress",
-                {"id": transcription_id, "progress": 50, "language": language},
+                {"id": transcription_id, "progress": 0.5, "language": language},
             )
 
         # Alignment: timestamps precisos no nível de palavra

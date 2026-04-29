@@ -49,20 +49,20 @@ function DashboardContent() {
           <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
           <OllamaStatusBadge running={ollamaRunning} onStart={startOllama} onStop={stopOllama} />
         </div>
-        <p className="text-lg text-muted-foreground">Here's an overview of your recordings and activity.</p>
+        <p className="text-lg text-muted-foreground">Visão geral das suas gravações e atividade.</p>
       </div>
 
       <div className="flex flex-wrap gap-3" ref={actionsRef}>
         <Button asChild size="lg" className="gap-2 transition-transform hover:scale-105">
           <Link to="/recording">
             <Mic className="size-5" />
-            Start Recording
+            Gravar
           </Link>
         </Button>
         <Button variant="outline" size="lg" className="gap-2 transition-transform hover:scale-105" asChild>
           <Link to="/import">
             <FileText className="size-5" />
-            Import Audio
+            Importar Áudio
           </Link>
         </Button>
       </div>

@@ -14,10 +14,10 @@ export function useDashboard() {
     retry: false,
   })
 
-  const { data: ollamaStatus, isLoading: isOllamaStatusLoading } = useQuery({
+  const { data: ollamaStatus } = useQuery({
     queryKey: ['ollama', 'status'],
     queryFn: () => ollamaApi.ollamaStatusApiV1OllamaStatusGet(),
-    refetchInterval: 5000,
+    refetchInterval: (query) => ((query.state.data as any)?.running ? 5000 : 30000),
     retry: false,
   })
 
@@ -46,6 +46,6 @@ export function useDashboard() {
     ollamaRunning: (ollamaStatus as any)?.running ?? false,
     startOllama: () => startOllama.mutate(),
     stopOllama: () => stopOllama.mutate(),
-    isLoading: isTranscriptionsLoading || isOllamaStatusLoading,
+    isLoading: isTranscriptionsLoading,
   }
 }

@@ -17,10 +17,13 @@ function RootLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-background relative h-svh overflow-hidden">
-        {status !== "ready" && <BackendOverlay status={status} />}
-        <div className="flex-1 min-h-0">
-          <Outlet />
-        </div>
+        {status !== "ready" ? (
+          <BackendOverlay status={status} />
+        ) : (
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+        )}
       </SidebarInset>
     </SidebarProvider>
   )

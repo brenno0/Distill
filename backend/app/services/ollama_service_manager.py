@@ -16,7 +16,7 @@ class OllamaServiceManager:
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    f"{settings.ollama_base_url}/api/tags", timeout=2.0
+                    f"{settings.ollama_base_url}/api/tags", timeout=0.5
                 )
                 return resp.status_code == 200
         except Exception:

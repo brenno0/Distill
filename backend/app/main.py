@@ -50,6 +50,12 @@ async def startup():
         pass  # DB not available — API still serves OpenAPI spec
 
 
+@app.on_event("shutdown")
+async def shutdown():
+    from app.services.recording_service import recording_service
+    await recording_service.shutdown()
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}

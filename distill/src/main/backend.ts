@@ -37,13 +37,24 @@ export class BackendManager extends EventEmitter {
     return candidates.find((path) => existsSync(path)) ?? candidates[0]
   }
 
+  private resolveStartCmd(backendPath: string): { cmd: string; args: string[] } {
+    const unixPython = join(backendPath, '.venv/bin/python')
+    const winPython = join(backendPath, '.venv/Scripts/python.exe')
+    const venvPython = existsSync(unixPython) ? unixPython : existsSync(winPython) ? winPython : null
+    if (venvPython) {
+      return { cmd: venvPython, args: ['-m', 'uvicorn', 'app.main:app', '--port', '47821'] }
+    }
+    return { cmd: 'poetry', args: ['run', 'uvicorn', 'app.main:app', '--port', '47821'] }
+  }
+
   start(webContents?: Electron.WebContents): void {
     const backendPath = this.resolveBackendPath()
+    const { cmd, args } = this.resolveStartCmd(backendPath)
 
     this.setStatus('starting')
     webContents?.send('backend:status', 'starting')
 
-    this.process = spawn('poetry', ['run', 'uvicorn', 'app.main:app', '--port', '47821'], {
+    this.process = spawn(cmd, args, {
       cwd: backendPath,
       stdio: 'pipe'
     })
@@ -73,7 +84,7 @@ export class BackendManager extends EventEmitter {
   }
 
   private async pollHealth(webContents?: Electron.WebContents, elapsed = 0): Promise<void> {
-    if (elapsed > 30000) {
+    if (elapsed > 60000) {
       this.setStatus('error')
       webContents?.send('backend:status', 'error')
       return

@@ -40,6 +40,8 @@ class YouTubeService:
                 progress_callback=send,
             )
 
+            warnings: list[str] = []
+
             # Save text immediately — KB/summary failures must not block this
             await transcription_repo.update(
                 transcription_id,
@@ -58,12 +60,14 @@ class YouTubeService:
                 )
             except Exception:
                 logging.exception("KB ingestion failed for %s", transcription_id)
+                warnings.append("kb_failed")
 
             summary = ""
             try:
                 summary = await summary_service.generate(result["text"])
             except Exception:
                 logging.exception("Summary generation failed for %s", transcription_id)
+                warnings.append("summary_failed")
 
             if summary:
                 await transcription_repo.update(transcription_id, {"summary": summary})
@@ -76,8 +80,16 @@ class YouTubeService:
                 )
             except Exception:
                 logging.exception("Library upsert failed for %s", transcription_id)
+                warnings.append("library_failed")
 
-            await send("pipeline_complete", {"transcription_id": transcription_id})
+            if warnings:
+                existing_metadata = (await transcription_repo.get(transcription_id) or {}).get("metadata") or {}
+                await transcription_repo.update(
+                    transcription_id,
+                    {"metadata": {**existing_metadata, "post_processing_warnings": warnings}},
+                )
+
+            await send("pipeline_complete", {"transcription_id": transcription_id, "warnings": warnings})
         except Exception as e:
             logging.exception("YouTube pipeline error for %s", transcription_id)
             await transcription_repo.update(

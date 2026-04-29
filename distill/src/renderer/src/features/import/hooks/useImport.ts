@@ -27,7 +27,8 @@ export function useImport() {
 
       wsManager.connect(id, (event) => {
         if (event.event === 'youtube_download_start') setStatus('downloading')
-        if (event.event === 'transcription_start') setStatus('transcribing')
+        if (event.event === 'youtube_download_progress') setProgress((event.data.progress as number) ?? 0)
+        if (event.event === 'transcription_start') { setProgress(0); setStatus('transcribing') }
         if (event.event === 'transcription_progress') setProgress((event.data.progress as number) ?? 0)
         if (event.event === 'pipeline_complete') {
           queryClient.invalidateQueries({ queryKey: ['transcriptions'] })

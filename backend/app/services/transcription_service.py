@@ -83,6 +83,8 @@ class TranscriptionService:
             
             metadata["segments"] = result.get("segments", [])
 
+            warnings: list[str] = []
+
             # Save text immediately — KB/summary failures must not block this
             await transcription_repo.update(
                 transcription_id,
@@ -101,12 +103,14 @@ class TranscriptionService:
                 )
             except Exception:
                 logger.exception("KB ingestion failed for %s", transcription_id)
+                warnings.append("kb_failed")
 
             summary = ""
             try:
                 summary = await summary_service.generate(result["text"])
             except Exception:
                 logger.exception("Summary generation failed for %s", transcription_id)
+                warnings.append("summary_failed")
 
             if summary:
                 await transcription_repo.update(transcription_id, {"summary": summary})
@@ -119,8 +123,14 @@ class TranscriptionService:
                 )
             except Exception:
                 logger.exception("Library upsert failed for %s", transcription_id)
+                warnings.append("library_failed")
 
-            await send("pipeline_complete", {"transcription_id": transcription_id})
+            if warnings:
+                await transcription_repo.update(
+                    transcription_id, {"metadata": {**metadata, "post_processing_warnings": warnings}}
+                )
+
+            await send("pipeline_complete", {"transcription_id": transcription_id, "warnings": warnings})
         except Exception as e:
             await transcription_repo.update(
                 transcription_id, {"status": TranscriptionStatus.FAILED}

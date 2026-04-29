@@ -1,7 +1,22 @@
-from fastapi import APIRouter
+import sounddevice as sd
+from fastapi import APIRouter, HTTPException
 from app.models.settings import AppSettingsUpdate, AppSettingsResponse, LLMConfig, IntegrationsConfig, AudioConfig
 from app.core.config import settings as app_settings, set_secret, get_secret
 from app.db.app_settings_repository import app_settings_repo
+
+
+def _validate_audio_devices(audio: AudioConfig) -> None:
+    try:
+        all_devs = sd.query_devices()
+        valid_input_ids = {i for i, d in enumerate(all_devs) if d.get("max_input_channels", 0) > 0}
+        valid_output_ids = {i for i, d in enumerate(all_devs) if d.get("max_output_channels", 0) > 0}
+    except Exception:
+        return  # sounddevice unavailable — skip validation
+
+    if audio.input_device is not None and audio.input_device not in valid_input_ids:
+        raise HTTPException(status_code=422, detail=f"input_device {audio.input_device} not found")
+    if audio.output_device is not None and audio.output_device not in valid_output_ids:
+        raise HTTPException(status_code=422, detail=f"output_device {audio.output_device} not found")
 
 router = APIRouter()
 
@@ -76,6 +91,8 @@ async def update_settings(body: AppSettingsUpdate):
             if hasattr(app_settings, field):
                 setattr(app_settings, field, value)
 
+    if body.audio is not None:
+        _validate_audio_devices(body.audio)
     audio_data = body.audio.model_dump() if body.audio is not None else None
 
     if body.llm:
