@@ -1,21 +1,40 @@
 import { useEffect, useRef } from "react"
 import { Link, useRouterState } from "@tanstack/react-router"
+import { useQuery } from "@tanstack/react-query"
 import { animate, stagger } from "animejs"
 import { gsap } from "gsap"
-import { Home, Mic, FolderOpen, Settings, Search, Plus, Download } from "lucide-react"
+import { Home, Mic, FolderOpen, Settings, Search, Plus, Download, Clock } from "lucide-react"
 import { Button } from "@renderer/components/ui/button"
+import { useRecordingStore } from "@renderer/stores/useRecordingStore"
+import { getTranscriptions } from "@renderer/lib/api/generated/transcriptions/transcriptions"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
 } from "@renderer/components/ui/sidebar"
+
+const transcriptionsApi = getTranscriptions()
+
+const STATUS_DOT: Record<string, string> = {
+  completed: "bg-green-500",
+  processing: "bg-blue-500 animate-pulse",
+  pending: "bg-yellow-500 animate-pulse",
+  failed: "bg-destructive",
+}
+
+function formatElapsed(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 const mainNavItems = [
   { title: "Home", to: "/" as const, icon: Home },
@@ -27,6 +46,15 @@ export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const logoRef = useRef<HTMLDivElement>(null)
   const navItemsRef = useRef<HTMLLIElement[]>([])
+  const isRecording = useRecordingStore((s) => s.isRecording)
+  const elapsedSeconds = useRecordingStore((s) => s.elapsedSeconds)
+
+  const { data: recentTranscriptions } = useQuery({
+    queryKey: ['transcriptions'],
+    queryFn: () => transcriptionsApi.listTranscriptionsApiV1TranscriptionsGet({ limit: 5 } as any),
+    refetchInterval: 10000,
+    retry: false,
+  })
 
   useEffect(() => {
     if (logoRef.current) {
@@ -80,6 +108,18 @@ export function AppSidebar() {
           </Button>
         </div>
 
+        {isRecording && (
+          <div className="px-2 pb-2">
+            <Link to={"/recording" as any}>
+              <div className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 hover:bg-destructive/15 transition-colors cursor-pointer">
+                <span className="size-2 shrink-0 rounded-full bg-destructive animate-pulse" />
+                <span className="text-sm text-destructive font-medium flex-1">Recording</span>
+                <span className="text-xs text-destructive/70 tabular-nums">{formatElapsed(elapsedSeconds)}</span>
+              </div>
+            </Link>
+          </div>
+        )}
+
         <SidebarSeparator />
 
         <SidebarGroup>
@@ -103,6 +143,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {recentTranscriptions && recentTranscriptions.length > 0 && (
+          <>
+            <SidebarSeparator />
+            <SidebarGroup>
+              <SidebarGroupLabel className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="size-3" />
+                Recent
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {recentTranscriptions.slice(0, 5).map((t: any) => (
+                    <SidebarMenuItem key={t.id}>
+                      <SidebarMenuButton asChild tooltip={t.title}>
+                        <Link to={"/transcription/$id" as any} params={{ id: t.id }}>
+                          <span className={`size-2 shrink-0 rounded-full ${STATUS_DOT[t.status] ?? 'bg-muted-foreground'}`} />
+                          <span className="truncate">{t.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-border">

@@ -1,8 +1,13 @@
 from fastapi import APIRouter, HTTPException, BackgroundTasks
+from pydantic import BaseModel
 from app.models.transcription import ProcessRequest, TranscriptionListItem
 from app.services.transcription_service import transcription_service
 
 router = APIRouter()
+
+
+class RenameRequest(BaseModel):
+    title: str
 
 
 @router.post("/process")
@@ -26,6 +31,14 @@ async def list_transcriptions(limit: int = 50):
 @router.get("/{transcription_id}")
 async def get_transcription(transcription_id: str):
     record = await transcription_service.get(transcription_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+    return record
+
+
+@router.patch("/{transcription_id}")
+async def rename_transcription(transcription_id: str, request: RenameRequest):
+    record = await transcription_service.update(transcription_id, {"title": request.title.strip()})
     if not record:
         raise HTTPException(status_code=404, detail="Transcription not found")
     return record

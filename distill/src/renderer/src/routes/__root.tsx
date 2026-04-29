@@ -1,8 +1,42 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router"
 import { useBackendStore } from "@renderer/stores/useBackendStore"
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { SidebarProvider, SidebarInset } from "@renderer/components/ui/sidebar"
 import { AppSidebar } from "@renderer/components/app-sidebar"
+import { useRecordingStore } from "@renderer/stores/useRecordingStore"
+import { axiosInstance } from "@renderer/lib/axios"
+
+function RecordingProvider() {
+  const isRecording = useRecordingStore((s) => s.isRecording)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const levelRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (!isRecording) return
+
+    const { tickElapsed, setAudioLevel, setMonitorLevel } = useRecordingStore.getState()
+
+    timerRef.current = setInterval(tickElapsed, 1000)
+    levelRef.current = setInterval(async () => {
+      try {
+        const data = await axiosInstance<{ level: number; mic_level: number; monitor_level: number }>(
+          { url: '/api/v1/recordings/level', method: 'GET' }
+        )
+        setAudioLevel((data as any).mic_level ?? (data as any).level ?? 0)
+        setMonitorLevel((data as any).monitor_level ?? 0)
+      } catch {
+        // ignore
+      }
+    }, 100)
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current)
+      if (levelRef.current) clearInterval(levelRef.current)
+    }
+  }, [isRecording])
+
+  return null
+}
 
 function RootLayout() {
   const setStatus = useBackendStore((s) => s.setStatus)
@@ -15,6 +49,7 @@ function RootLayout() {
 
   return (
     <SidebarProvider>
+      <RecordingProvider />
       <AppSidebar />
       <SidebarInset className="bg-background relative h-svh overflow-hidden">
         {status !== "ready" ? (

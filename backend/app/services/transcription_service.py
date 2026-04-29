@@ -147,6 +147,9 @@ class TranscriptionService:
             return {**record, "segments": segments}
         return record
 
+    async def update(self, transcription_id: str, data: dict) -> dict | None:
+        return await transcription_repo.update(transcription_id, data)
+
     async def list(self, limit: int = 50) -> list[dict]:
         return await transcription_repo.list(limit=limit)
 

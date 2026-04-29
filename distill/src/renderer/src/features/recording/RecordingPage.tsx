@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { animate } from "animejs"
 import { Mic } from "lucide-react"
@@ -13,6 +13,7 @@ export function RecordingPage() {
   const navigate = useNavigate()
   const { isRecording, elapsedSeconds, audioLevel, monitorLevel, transcriptionId, start, stop, isStarting, isStopping } =
     useRecording()
+  const [recordingTitle, setRecordingTitle] = useState('')
 
   const containerRef = useRef<HTMLDivElement>(null)
   const titleRef = useRef<HTMLDivElement>(null)
@@ -40,13 +41,27 @@ export function RecordingPage() {
   return (
     <div ref={containerRef} className="flex flex-col items-center justify-center min-h-screen bg-background p-6">
       <div className="flex flex-col items-center gap-8 w-full max-w-xl">
-        <div className="text-center" ref={titleRef}>
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            {isRecording ? "Recording..." : "Ready to Record"}
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            {isRecording ? "Your audio is being captured in real-time" : "Start a new recording"}
-          </p>
+        <div className="text-center w-full" ref={titleRef}>
+          {isRecording ? (
+            <>
+              <h1 className="text-4xl font-bold text-foreground mb-2">Recording...</h1>
+              {recordingTitle && (
+                <p className="text-lg text-muted-foreground">{recordingTitle}</p>
+              )}
+            </>
+          ) : (
+            <>
+              <h1 className="text-4xl font-bold text-foreground mb-4">Ready to Record</h1>
+              <input
+                type="text"
+                value={recordingTitle}
+                onChange={(e) => setRecordingTitle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && !isStarting && start(recordingTitle)}
+                placeholder="Recording name (optional)..."
+                className="w-full bg-muted/40 border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              />
+            </>
+          )}
         </div>
 
         <div ref={indicatorRef} className="relative flex items-center justify-center w-48 h-48 rounded-full">
@@ -79,7 +94,7 @@ export function RecordingPage() {
             isStarting={isStarting}
             isStopping={isStopping}
             elapsedSeconds={elapsedSeconds}
-            onStart={start}
+            onStart={() => start(recordingTitle)}
             onStop={stop}
           />
         </div>

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { getRecordings } from '@renderer/lib/api/generated/recordings/recordings'
 import { useRecordingStore } from '@renderer/stores/useRecordingStore'
 import { axiosInstance } from '@renderer/lib/axios'
@@ -15,15 +15,20 @@ export function useRecording() {
   const audioLevel = useRecordingStore((s) => s.audioLevel)
   const monitorLevel = useRecordingStore((s) => s.monitorLevel)
   const elapsedSeconds = useRecordingStore((s) => s.elapsedSeconds)
-  const { startRecording, stopRecording, setAudioLevel, setMonitorLevel, tickElapsed } =
-    useRecordingStore.getState()
-  const levelIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { startRecording, stopRecording } = useRecordingStore.getState()
+  const pendingTitleRef = useRef('')
 
   const startMutation = useMutation({
     mutationFn: recordingsApi.startRecordingApiV1RecordingsStartPost,
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
       startRecording(data.transcription_id)
+      const title = pendingTitleRef.current.trim()
+      if (title) {
+        try {
+          await axiosInstance({ url: `/api/v1/transcriptions/${data.transcription_id}`, method: 'PATCH', data: { title } })
+        } catch { /* ignore — title stays as default */ }
+      }
+      pendingTitleRef.current = ''
     },
   })
 
@@ -37,27 +42,10 @@ export function useRecording() {
     },
   })
 
-  useEffect(() => {
-    if (!isRecording) return
-
-    timerRef.current = setInterval(tickElapsed, 1000)
-    levelIntervalRef.current = setInterval(async () => {
-      try {
-        const data = await axiosInstance<{ level: number; mic_level: number; monitor_level: number }>(
-          { url: '/api/v1/recordings/level', method: 'GET' }
-        )
-        setAudioLevel((data as any).mic_level ?? (data as any).level ?? 0)
-        setMonitorLevel((data as any).monitor_level ?? 0)
-      } catch {
-        // ignore
-      }
-    }, 100)
-
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-      if (levelIntervalRef.current) clearInterval(levelIntervalRef.current)
-    }
-  }, [isRecording, tickElapsed, setAudioLevel, setMonitorLevel])
+  const start = (title = '') => {
+    pendingTitleRef.current = title
+    startMutation.mutate()
+  }
 
   return {
     isRecording,
@@ -65,7 +53,7 @@ export function useRecording() {
     audioLevel,
     monitorLevel,
     transcriptionId,
-    start: startMutation.mutate,
+    start,
     stop: stopMutation.mutate,
     isStarting: startMutation.isPending,
     isStopping: stopMutation.isPending,
