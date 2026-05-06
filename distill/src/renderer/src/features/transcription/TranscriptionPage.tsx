@@ -9,7 +9,7 @@ import { TranscriptionPageSkeleton } from './components/TranscriptionPageSkeleto
 
 function TranscriptionContent() {
   const { id } = useParams({ from: '/transcription/$id' })
-  const { transcription, isLoading, progress, status } = useTranscription(id)
+  const { transcription, isLoading, progress, status, errorMessage, errorLog, retry, isRetrying } = useTranscription(id)
   const t = transcription as any
   const segments = (t.segments ?? []) as Array<{
     text: string; start: number; end: number; speaker?: string
@@ -29,6 +29,10 @@ function TranscriptionContent() {
           status={status}
           progress={progress}
           transcriptionType={transcriptionType}
+          errorMessage={errorMessage}
+          errorLog={errorLog}
+          onRetry={retry}
+          isRetrying={isRetrying}
         />
       </Panel>
       <Separator className="w-1 bg-white/5 hover:bg-[var(--color-accent)]/30 transition-colors cursor-col-resize" />

@@ -132,10 +132,32 @@ class TranscriptionService:
 
             await send("pipeline_complete", {"transcription_id": transcription_id, "warnings": warnings})
         except Exception as e:
+            from datetime import datetime as _dt
+            record = await transcription_repo.get(transcription_id)
+            existing_meta = (record or {}).get("metadata") or {}
+            error_log = list(existing_meta.get("error_log") or [])
+            error_log.append({
+                "timestamp": _dt.utcnow().isoformat(),
+                "error": str(e),
+            })
             await transcription_repo.update(
-                transcription_id, {"status": TranscriptionStatus.FAILED}
+                transcription_id,
+                {
+                    "status": TranscriptionStatus.FAILED,
+                    "metadata": {**existing_meta, "error_message": str(e), "error_log": error_log},
+                },
             )
             await send("pipeline_error", {"transcription_id": transcription_id, "error": str(e)})
+
+    async def retry(self, transcription_id: str, audio_path: str) -> None:
+        record = await transcription_repo.get(transcription_id)
+        existing_meta = (record or {}).get("metadata") or {}
+        cleaned_meta = {k: v for k, v in existing_meta.items() if k not in ("error_message",)}
+        await transcription_repo.update(
+            transcription_id,
+            {"status": TranscriptionStatus.PENDING, "metadata": cleaned_meta},
+        )
+        await self.process(transcription_id, audio_path)
 
     async def get(self, transcription_id: str) -> dict | None:
         record = await transcription_repo.get(transcription_id)

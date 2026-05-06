@@ -23,6 +23,22 @@ async def process_transcription(request: ProcessRequest, background_tasks: Backg
     return {"message": "Transcription started", "transcription_id": request.transcription_id}
 
 
+@router.post("/{transcription_id}/retry")
+async def retry_transcription(transcription_id: str, background_tasks: BackgroundTasks):
+    record = await transcription_service.get(transcription_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Transcription not found")
+    if record.get("status") != "failed":
+        raise HTTPException(status_code=409, detail="Only failed transcriptions can be retried")
+    audio_path = record.get("audio_path", "")
+    background_tasks.add_task(
+        transcription_service.retry,
+        transcription_id=transcription_id,
+        audio_path=audio_path,
+    )
+    return {"message": "Retry started", "transcription_id": transcription_id}
+
+
 @router.get("/", response_model=list[TranscriptionListItem])
 async def list_transcriptions(limit: int = 50):
     return await transcription_service.list(limit=limit)

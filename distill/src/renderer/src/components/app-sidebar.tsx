@@ -1,12 +1,12 @@
-import { useEffect, useRef } from "react"
-import { Link, useRouterState } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
-import { animate, stagger } from "animejs"
-import { gsap } from "gsap"
-import { Home, Mic, FolderOpen, Settings, Search, Plus, Download, Clock } from "lucide-react"
-import { Button } from "@renderer/components/ui/button"
-import { useRecordingStore } from "@renderer/stores/useRecordingStore"
-import { getTranscriptions } from "@renderer/lib/api/generated/transcriptions/transcriptions"
+import { useEffect, useRef } from 'react'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import { animate, stagger } from 'animejs'
+import { gsap } from 'gsap'
+import { Home, Mic, FolderOpen, Settings, Search, Plus, Download, Clock } from 'lucide-react'
+import { Button } from '@renderer/components/ui/button'
+import { useRecordingStore } from '@renderer/stores/useRecordingStore'
+import { getTranscriptions } from '@renderer/lib/api/generated/transcriptions/transcriptions'
 import {
   Sidebar,
   SidebarContent,
@@ -18,16 +18,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
-} from "@renderer/components/ui/sidebar"
+  SidebarSeparator
+} from '@renderer/components/ui/sidebar'
 
 const transcriptionsApi = getTranscriptions()
 
 const STATUS_DOT: Record<string, string> = {
-  completed: "bg-green-500",
-  processing: "bg-blue-500 animate-pulse",
-  pending: "bg-yellow-500 animate-pulse",
-  failed: "bg-destructive",
+  completed: 'bg-green-500',
+  processing: 'bg-blue-500 animate-pulse',
+  pending: 'bg-yellow-500 animate-pulse',
+  failed: 'bg-destructive'
 }
 
 function formatElapsed(seconds: number): string {
@@ -37,9 +37,9 @@ function formatElapsed(seconds: number): string {
 }
 
 const mainNavItems = [
-  { title: "Home", to: "/" as const, icon: Home },
-  { title: "Library", to: "/library" as const, icon: FolderOpen },
-  { title: "Import", to: "/import" as const, icon: Download },
+  { title: 'Home', to: '/' as const, icon: Home },
+  { title: 'Library', to: '/library' as const, icon: FolderOpen },
+  { title: 'Import', to: '/import' as const, icon: Download }
 ]
 
 export function AppSidebar() {
@@ -51,9 +51,9 @@ export function AppSidebar() {
 
   const { data: recentTranscriptions } = useQuery({
     queryKey: ['transcriptions'],
-    queryFn: () => transcriptionsApi.listTranscriptionsApiV1TranscriptionsGet({ limit: 5 } as any),
+    queryFn: () => transcriptionsApi.listTranscriptionsApiV1TranscriptionsGet({ limit: 5 }),
     refetchInterval: 10000,
-    retry: false,
+    retry: false
   })
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export function AppSidebar() {
       gsap.fromTo(
         logoRef.current,
         { opacity: 0, scale: 0.8, rotate: -10 },
-        { opacity: 1, scale: 1, rotate: 0, duration: 0.6, ease: "back.out(1.7)" }
+        { opacity: 1, scale: 1, rotate: 0, duration: 0.6, ease: 'back.out(1.7)' }
       )
     }
     animate(navItemsRef.current, {
@@ -69,14 +69,14 @@ export function AppSidebar() {
       translateX: [-20, 0],
       delay: stagger(50, { start: 200 }),
       duration: 400,
-      easing: "easeOutCubic",
+      easing: 'easeOutCubic'
     })
   }, [])
 
   const handleNavHover = (index: number, isEntering: boolean) => {
     const item = navItemsRef.current[index]
     if (item) {
-      gsap.to(item, { x: isEntering ? 4 : 0, duration: 0.2, ease: "power2.out" })
+      gsap.to(item, { x: isEntering ? 4 : 0, duration: 0.2, ease: 'power2.out' })
     }
   }
 
@@ -93,8 +93,11 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <div className="px-2 pb-2">
-          <Button asChild className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02]">
-            <Link to={"/recording" as any}>
+          <Button
+            asChild
+            className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200 hover:scale-[1.02]"
+          >
+            <Link to={'/recording'}>
               <Plus className="size-4" />
               New Recording
             </Link>
@@ -102,7 +105,10 @@ export function AppSidebar() {
         </div>
 
         <div className="px-2 pb-4">
-          <Button variant="outline" className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
+          >
             <Search className="size-4" />
             <span>Search recordings...</span>
           </Button>
@@ -110,11 +116,13 @@ export function AppSidebar() {
 
         {isRecording && (
           <div className="px-2 pb-2">
-            <Link to={"/recording" as any}>
+            <Link to={'/recording'}>
               <div className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-destructive/10 hover:bg-destructive/15 transition-colors cursor-pointer">
                 <span className="size-2 shrink-0 rounded-full bg-destructive animate-pulse" />
                 <span className="text-sm text-destructive font-medium flex-1">Recording</span>
-                <span className="text-xs text-destructive/70 tabular-nums">{formatElapsed(elapsedSeconds)}</span>
+                <span className="text-xs text-destructive/70 tabular-nums">
+                  {formatElapsed(elapsedSeconds)}
+                </span>
               </div>
             </Link>
           </div>
@@ -128,12 +136,14 @@ export function AppSidebar() {
               {mainNavItems.map((item, index) => (
                 <SidebarMenuItem
                   key={item.title}
-                  ref={(el) => { if (el) navItemsRef.current[index] = el }}
+                  ref={(el) => {
+                    if (el) navItemsRef.current[index] = el
+                  }}
                   onMouseEnter={() => handleNavHover(index, true)}
                   onMouseLeave={() => handleNavHover(index, false)}
                 >
                   <SidebarMenuButton asChild isActive={pathname === item.to} tooltip={item.title}>
-                    <Link to={item.to as any}>
+                    <Link to={item.to}>
                       <item.icon className="size-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -157,8 +167,10 @@ export function AppSidebar() {
                   {recentTranscriptions.slice(0, 5).map((t: any) => (
                     <SidebarMenuItem key={t.id}>
                       <SidebarMenuButton asChild tooltip={t.title}>
-                        <Link to={"/transcription/$id" as any} params={{ id: t.id }}>
-                          <span className={`size-2 shrink-0 rounded-full ${STATUS_DOT[t.status] ?? 'bg-muted-foreground'}`} />
+                        <Link to={'/transcription/$id'} params={() => ({ id: t.id })}>
+                          <span
+                            className={`size-2 shrink-0 rounded-full ${STATUS_DOT[t.status] ?? 'bg-muted-foreground'}`}
+                          />
                           <span className="truncate">{t.title}</span>
                         </Link>
                       </SidebarMenuButton>
@@ -173,7 +185,7 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4 border-t border-border">
         <Button variant="ghost" size="icon" asChild className="hover:bg-accent transition-colors">
-          <Link to={"/settings" as any}>
+          <Link to={'/settings'}>
             <Settings className="size-4 text-muted-foreground" />
           </Link>
         </Button>

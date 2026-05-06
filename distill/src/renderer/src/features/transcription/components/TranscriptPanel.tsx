@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react'
-import { Copy, Loader2 } from 'lucide-react'
+import { memo, useMemo, useState } from 'react'
+import { Copy, Loader2, RefreshCw, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@renderer/components/ui/avatar'
 
 interface Segment { text: string; start: number; end: number; speaker?: string }
@@ -15,6 +15,10 @@ type TranscriptPanelProps = {
   status?: string
   progress?: number | null
   transcriptionType?: string
+  errorMessage?: string
+  errorLog?: Array<{ timestamp: string; error: string }>
+  onRetry?: () => void
+  isRetrying?: boolean
 }
 
 export const TranscriptPanel = memo(function TranscriptPanel({
@@ -23,7 +27,12 @@ export const TranscriptPanel = memo(function TranscriptPanel({
   status,
   progress,
   transcriptionType,
+  errorMessage,
+  errorLog = [],
+  onRetry,
+  isRetrying,
 }: TranscriptPanelProps) {
+  const [showLog, setShowLog] = useState(false)
   const blocks = useMemo<SegmentBlock[]>(() => {
     if (segments.length === 0) return []
     const sorted = [...segments].sort((a, b) => a.start - b.start)
@@ -182,9 +191,47 @@ export const TranscriptPanel = memo(function TranscriptPanel({
               )
             : status === 'failed'
             ? (
-                <div className="flex flex-col items-center justify-center h-full gap-2 py-16">
-                  <p className="text-sm text-red-400">Transcription failed</p>
-                  <p className="text-xs text-white/30">Check the backend logs for details</p>
+                <div className="flex flex-col items-center justify-center h-full gap-4 px-6 py-16">
+                  <AlertCircle className="h-8 w-8 text-red-400/70" />
+                  <p className="text-sm text-red-400 font-medium">Transcription failed</p>
+                  {errorMessage && (
+                    <p className="text-xs text-white/40 text-center max-w-xs font-mono break-all">
+                      {errorMessage}
+                    </p>
+                  )}
+                  {onRetry && (
+                    <button
+                      onClick={() => onRetry()}
+                      disabled={isRetrying}
+                      className="flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-white/5 hover:bg-white/10 text-white/60 hover:text-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
+                      {isRetrying ? 'Retrying…' : 'Retry'}
+                    </button>
+                  )}
+                  {errorLog.length > 0 && (
+                    <div className="w-full max-w-sm">
+                      <button
+                        onClick={() => setShowLog((v) => !v)}
+                        className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/50 transition-colors w-full justify-center"
+                      >
+                        {showLog ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        {showLog ? 'Hide' : 'Show'} error log ({errorLog.length})
+                      </button>
+                      {showLog && (
+                        <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
+                          {[...errorLog].reverse().map((entry, i) => (
+                            <div key={i} className="rounded-md bg-white/5 px-3 py-2 text-xs">
+                              <p className="text-white/30 font-mono mb-1">
+                                {new Date(entry.timestamp).toLocaleString()}
+                              </p>
+                              <p className="text-red-300/70 font-mono break-all">{entry.error}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             : <p className="text-sm text-white/30 text-center mt-8">No transcript available</p>}

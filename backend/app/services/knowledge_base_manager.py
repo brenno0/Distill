@@ -42,10 +42,17 @@ class KnowledgeBaseManager:
             return self._embeddings
 
         if provider == "gemini":
+            from google.genai.client import Client
+            from google.genai.types import HttpOptions
             from langchain_google_genai import GoogleGenerativeAIEmbeddings
+            _client = Client(
+                api_key=get_secret("GOOGLE_API_KEY"),
+                http_options=HttpOptions(api_version="v1"),
+            )
             embeddings = GoogleGenerativeAIEmbeddings(
                 model="text-embedding-004",
                 google_api_key=get_secret("GOOGLE_API_KEY"),
+                client=_client,
             )
         elif provider == "openai":
             from langchain_openai import OpenAIEmbeddings

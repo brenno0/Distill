@@ -63,7 +63,18 @@ const deleteTranscriptionApiV1TranscriptionsTranscriptionIdDelete = (
     },
       );
     }
-  return {processTranscriptionApiV1TranscriptionsProcessPost,listTranscriptionsApiV1TranscriptionsGet,getTranscriptionApiV1TranscriptionsTranscriptionIdGet,deleteTranscriptionApiV1TranscriptionsTranscriptionIdDelete}};
+  /**
+ * @summary Retry Transcription
+ */
+const retryTranscriptionApiV1TranscriptionsTranscriptionIdRetryPost = (
+    transcriptionId: string,
+ ) => {
+      return axiosInstance<unknown>(
+      {url: `/api/v1/transcriptions/${transcriptionId}/retry`, method: 'POST'
+    },
+      );
+    }
+  return {processTranscriptionApiV1TranscriptionsProcessPost,listTranscriptionsApiV1TranscriptionsGet,getTranscriptionApiV1TranscriptionsTranscriptionIdGet,deleteTranscriptionApiV1TranscriptionsTranscriptionIdDelete,retryTranscriptionApiV1TranscriptionsTranscriptionIdRetryPost}};
 export type ProcessTranscriptionApiV1TranscriptionsProcessPostResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getTranscriptions>['processTranscriptionApiV1TranscriptionsProcessPost']>>>
 export type ListTranscriptionsApiV1TranscriptionsGetResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getTranscriptions>['listTranscriptionsApiV1TranscriptionsGet']>>>
 export type GetTranscriptionApiV1TranscriptionsTranscriptionIdGetResult = NonNullable<Awaited<ReturnType<ReturnType<typeof getTranscriptions>['getTranscriptionApiV1TranscriptionsTranscriptionIdGet']>>>

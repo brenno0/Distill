@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { getTranscriptions } from '@renderer/lib/api/generated/transcriptions/transcriptions'
 import { wsManager } from '@renderer/lib/ws'
@@ -22,6 +22,17 @@ export function useTranscription(id: string) {
   })
 
   const status = (data as any)?.status
+  const metadata = (data as any)?.metadata ?? {}
+  const errorMessage: string | undefined = metadata?.error_message
+  const errorLog: Array<{ timestamp: string; error: string }> = metadata?.error_log ?? []
+
+  const retryMutation = useMutation({
+    mutationFn: () =>
+      transcriptionsApi.retryTranscriptionApiV1TranscriptionsTranscriptionIdRetryPost(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transcription', id] })
+    },
+  })
 
   useEffect(() => {
     if (!id || TERMINAL_STATUSES.has(status)) {
@@ -38,5 +49,14 @@ export function useTranscription(id: string) {
     return () => wsManager.disconnect(id)
   }, [id, status, queryClient])
 
-  return { transcription: data ?? {}, isLoading, progress, status }
+  return {
+    transcription: data ?? {},
+    isLoading,
+    progress,
+    status,
+    errorMessage,
+    errorLog,
+    retry: retryMutation.mutate,
+    isRetrying: retryMutation.isPending,
+  }
 }
