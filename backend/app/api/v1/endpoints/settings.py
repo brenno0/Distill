@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.settings import AppSettingsUpdate, AppSettingsResponse, LLMConfig, IntegrationsConfig, AudioConfig
 from app.core.config import settings as app_settings, set_secret, get_secret
 from app.db.app_settings_repository import app_settings_repo
+from app.services.whisper_processor import whisper_processor
 
 
 def _validate_audio_devices(audio: AudioConfig) -> None:
@@ -64,6 +65,36 @@ async def get_settings():
     nunca o valor — previne exposição via devtools ou logs.
     """
     return await _build_response()
+
+
+@router.get("/cuda")
+async def get_cuda_memory():
+    """CUDA memory stats. Returns zeros if CUDA unavailable or model not loaded."""
+    try:
+        import torch
+        if not torch.cuda.is_available():
+            return {"available": False, "used_mb": 0, "total_mb": 0, "free_mb": 0}
+        used = torch.cuda.memory_allocated() / 1024 ** 2
+        reserved = torch.cuda.memory_reserved() / 1024 ** 2
+        total = torch.cuda.get_device_properties(0).total_memory / 1024 ** 2
+        free = total - reserved
+        return {
+            "available": True,
+            "used_mb": round(used),
+            "reserved_mb": round(reserved),
+            "total_mb": round(total),
+            "free_mb": round(free),
+            "model_loaded": whisper_processor._model is not None,
+        }
+    except Exception as e:
+        return {"available": False, "used_mb": 0, "total_mb": 0, "free_mb": 0, "error": str(e)}
+
+
+@router.post("/cuda/clear")
+async def clear_cuda_memory():
+    """Unload Whisper model and free CUDA memory."""
+    whisper_processor.unload()
+    return {"message": "CUDA memory cleared"}
 
 
 @router.put("/", response_model=AppSettingsResponse)

@@ -126,12 +126,20 @@ class WhisperProcessor:
             "transcribed_at": datetime.now(UTC).isoformat(),
         }
 
+        self.unload()
+
+        return result_data
+
+    def unload(self) -> None:
+        self._model = None
+        self._align_model = None
+        self._align_metadata = None
+        self._align_language = None
+        self._diarize_model = None
         gc.collect()
         if settings.whisper_device == "cuda":
             import torch
             torch.cuda.empty_cache()
-
-        return result_data
 
 
 whisper_processor = WhisperProcessor()
