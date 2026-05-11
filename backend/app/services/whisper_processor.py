@@ -25,6 +25,10 @@ class WhisperProcessor:
 
     def _load_model(self) -> Any:
         if self._model is None:
+            gc.collect()
+            if settings.whisper_device == "cuda":
+                import torch
+                torch.cuda.empty_cache()
             import whisperx
             self._model = whisperx.load_model(
                 settings.whisper_model,
@@ -79,6 +83,7 @@ class WhisperProcessor:
 
         audio = whisperx.load_audio(audio_path)
         result = model.transcribe(audio, batch_size=settings.whisper_batch_size)
+        del model  # release CUDA ref before align/diarize/unload
         language = result.get("language", "pt")
 
         if progress_callback:
@@ -98,12 +103,14 @@ class WhisperProcessor:
                 settings.whisper_device,
                 return_char_alignments=False,
             )
+            del align_model, align_metadata
 
         # Diarização: identifica quem falou cada segmento
         if settings.whisper_diarize and settings.hf_token:
             diarize_model = self._load_diarize_model()
             diarize_segments = diarize_model(audio)
             result = whisperx.assign_word_speakers(diarize_segments, result)
+            del diarize_model
 
         segments = result.get("segments", [])
         full_text = " ".join(s.get("text", "").strip() for s in segments)
@@ -131,6 +138,7 @@ class WhisperProcessor:
         return result_data
 
     def unload(self) -> None:
+        del self._model, self._align_model, self._align_metadata, self._diarize_model
         self._model = None
         self._align_model = None
         self._align_metadata = None
