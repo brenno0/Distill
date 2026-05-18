@@ -172,8 +172,8 @@ class TranscriptionService:
     async def update(self, transcription_id: str, data: dict) -> dict | None:
         return await transcription_repo.update(transcription_id, data)
 
-    async def list(self, limit: int = 50) -> list[dict]:
-        return await transcription_repo.list(limit=limit)
+    async def list(self, limit: int = 50, q: str | None = None) -> list[dict]:
+        return await transcription_repo.list(limit=limit, q=q)
 
     async def delete(self, transcription_id: str) -> dict:
         chunks = kb_manager.delete_transcription(transcription_id)

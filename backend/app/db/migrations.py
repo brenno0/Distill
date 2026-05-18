@@ -9,7 +9,7 @@ MIGRATIONS_DIR = Path(__file__).parent.parent.parent / "migrations"
 
 def _get_conn(database_url: str):
     import psycopg2
-    return psycopg2.connect(database_url)
+    return psycopg2.connect(database_url, connect_timeout=15)
 
 
 def _ensure_migrations_table(cur) -> None:

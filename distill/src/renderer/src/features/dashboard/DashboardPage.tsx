@@ -46,7 +46,7 @@ function DashboardContent() {
     <div className="flex flex-col gap-8 p-6 md:p-8">
       <div className="flex flex-col gap-2" ref={headerRef}>
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-4xl font-bold tracking-tight leading-none text-foreground">Dashboard</h1>
           <OllamaStatusBadge running={ollamaRunning} onStart={startOllama} onStop={stopOllama} />
         </div>
         <p className="text-lg text-muted-foreground">Visão geral das suas gravações e atividade.</p>

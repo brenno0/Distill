@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     whisper_model: str = "large-v3"
     whisper_device: str = "cuda"
     whisper_compute_type: str = "float16"  # float16 | int8 | int8_float16
-    whisper_batch_size: int = 16
+    whisper_batch_size: int = 8
     whisper_align: bool = True             # timestamps word-level
     whisper_diarize: bool = False          # requer hf_token
     hf_token: str = ""                     # HuggingFace token para diarização

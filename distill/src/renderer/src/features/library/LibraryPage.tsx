@@ -165,7 +165,7 @@ function LibraryContent() {
 
         <div className="flex flex-1 flex-col min-h-0 p-6 overflow-hidden">
         <div ref={headerRef} className="mb-6 shrink-0">
-          <h1 className="text-3xl font-semibold text-foreground mb-2">Recordings</h1>
+          <h1 className="text-4xl font-bold tracking-tight leading-none text-foreground mb-2">Recordings</h1>
           <p className="text-muted-foreground">Browse and manage all your recorded sessions</p>
         </div>
 

@@ -1,10 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { animate, stagger } from 'animejs'
 import { gsap } from 'gsap'
 import { Home, Mic, FolderOpen, Settings, Search, Plus, Download, Clock } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
+import { SearchModal } from '@renderer/components/SearchModal'
 import { useRecordingStore } from '@renderer/stores/useRecordingStore'
 import { getTranscriptions } from '@renderer/lib/api/generated/transcriptions/transcriptions'
 import {
@@ -48,6 +49,7 @@ export function AppSidebar() {
   const navItemsRef = useRef<HTMLLIElement[]>([])
   const isRecording = useRecordingStore((s) => s.isRecording)
   const elapsedSeconds = useRecordingStore((s) => s.elapsedSeconds)
+  const [searchOpen, setSearchOpen] = useState(false)
 
   const { data: recentTranscriptions } = useQuery({
     queryKey: ['transcriptions'],
@@ -87,11 +89,11 @@ export function AppSidebar() {
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary">
             <Mic className="size-5 text-primary-foreground" />
           </div>
-          <span className="text-xl text-foreground font-semibold">Distill</span>
+          <span className="text-xl text-foreground font-bold tracking-tight">Distill</span>
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 scrollbar-hover">
         <div className="px-2 pb-2">
           <Button
             asChild
@@ -107,12 +109,14 @@ export function AppSidebar() {
         <div className="px-2 pb-4">
           <Button
             variant="outline"
+            onClick={() => setSearchOpen(true)}
             className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground transition-colors duration-200"
           >
             <Search className="size-4" />
             <span>Search recordings...</span>
           </Button>
         </div>
+        <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
         {isRecording && (
           <div className="px-2 pb-2">
@@ -141,7 +145,11 @@ export function AppSidebar() {
                   }}
                   onMouseEnter={() => handleNavHover(index, true)}
                   onMouseLeave={() => handleNavHover(index, false)}
+                  className="relative"
                 >
+                  {pathname === item.to && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
+                  )}
                   <SidebarMenuButton asChild isActive={pathname === item.to} tooltip={item.title}>
                     <Link to={item.to}>
                       <item.icon className="size-4" />
@@ -183,10 +191,11 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-border">
-        <Button variant="ghost" size="icon" asChild className="hover:bg-accent transition-colors">
+      <SidebarFooter className="p-3 border-t border-border">
+        <Button variant="ghost" asChild className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <Link to={'/settings'}>
-            <Settings className="size-4 text-muted-foreground" />
+            <Settings className="size-4" />
+            <span className="text-sm">Settings</span>
           </Link>
         </Button>
       </SidebarFooter>

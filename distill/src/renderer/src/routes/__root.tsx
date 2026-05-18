@@ -55,7 +55,7 @@ function RootLayout() {
         {status !== "ready" ? (
           <BackendOverlay status={status} />
         ) : (
-          <div className="flex-1 min-h-0">
+          <div className="h-full overflow-hidden">
             <Outlet />
           </div>
         )}

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Optional
 from supabase import create_client, Client
@@ -48,30 +49,34 @@ class TranscriptionRepository:
     async def create(self, data: dict) -> dict:
         if not self._db:
             return data
-        result = self._db.table(self.TABLE).insert(data).execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).insert(data).execute()
+        )
         return result.data[0] if result.data else data
 
     async def get(self, transcription_id: str) -> Optional[dict]:
         if not self._db:
             return None
-        result = (
-            self._db.table(self.TABLE)
-            .select("*")
-            .eq("id", transcription_id)
-            .execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).select("*").eq("id", transcription_id).execute()
         )
         return result.data[0] if result.data else None
 
-    async def list(self, limit: int = 50) -> list[dict]:
+    async def list(self, limit: int = 50, q: str | None = None) -> list[dict]:
         if not self._db:
             return []
-        result = (
-            self._db.table(self.TABLE)
-            .select("id,title,transcription_type,status,summary,created_at")
-            .order("created_at", desc=True)
-            .limit(limit)
-            .execute()
-        )
+        def _query():
+            q_builder = (
+                self._db.table(self.TABLE)
+                .select("id,title,transcription_type,status,summary,created_at")
+                .order("created_at", desc=True)
+                .limit(limit)
+            )
+            if q:
+                term = f"%{q}%"
+                q_builder = q_builder.or_(f"title.ilike.{term},text.ilike.{term}")
+            return q_builder.execute()
+        result = await asyncio.to_thread(_query)
         return result.data or []
 
     async def update(self, transcription_id: str, data: dict) -> Optional[dict]:
@@ -79,22 +84,16 @@ class TranscriptionRepository:
             return data
         from datetime import datetime
         data["updated_at"] = datetime.utcnow().isoformat()
-        result = (
-            self._db.table(self.TABLE)
-            .update(data)
-            .eq("id", transcription_id)
-            .execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).update(data).eq("id", transcription_id).execute()
         )
         return result.data[0] if result.data else None
 
     async def delete(self, transcription_id: str) -> bool:
         if not self._db:
             return True
-        result = (
-            self._db.table(self.TABLE)
-            .delete()
-            .eq("id", transcription_id)
-            .execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).delete().eq("id", transcription_id).execute()
         )
         return bool(result.data)
 

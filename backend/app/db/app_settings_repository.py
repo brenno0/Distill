@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -33,7 +34,9 @@ class AppSettingsRepository:
     async def get(self) -> Optional[dict]:
         if not self._db:
             return self._read_local()
-        result = self._db.table(self.TABLE).select("*").eq("id", True).limit(1).execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).select("*").eq("id", True).limit(1).execute()
+        )
         return result.data[0] if result.data else None
 
     async def upsert(self, provider: str, model: str, audio: dict | None = None) -> dict:
@@ -49,7 +52,9 @@ class AppSettingsRepository:
             merged = {**existing, **payload}
             self._write_local(merged)
             return merged
-        result = self._db.table(self.TABLE).upsert(payload).execute()
+        result = await asyncio.to_thread(
+            lambda: self._db.table(self.TABLE).upsert(payload).execute()
+        )
         return result.data[0] if result.data else payload
 
 

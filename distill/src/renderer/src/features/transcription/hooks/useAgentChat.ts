@@ -41,5 +41,7 @@ export function useAgentChat(transcriptionId: string) {
     sendMutation.mutate(input.trim())
   }
 
-  return { messages, input, setInput, send, isPending: sendMutation.isPending }
+  const clearMessages = () => setMessages([])
+
+  return { messages, input, setInput, send, clearMessages, isPending: sendMutation.isPending }
 }

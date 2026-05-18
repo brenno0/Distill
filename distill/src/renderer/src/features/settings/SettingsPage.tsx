@@ -23,15 +23,15 @@ function SettingsContent() {
 
   return (
     <div className="flex h-full">
-      <nav className="w-44 shrink-0 border-r border-white/5 p-4 space-y-1">
+      <nav className="w-44 shrink-0 border-r border-border p-4 space-y-1">
         {NAV.map((item) => (
           <button
             key={item.id}
             onClick={() => setSection(item.id)}
             className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
               section === item.id
-                ? 'bg-[var(--color-accent)]/15 text-[var(--color-accent)]'
-                : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                ? 'bg-primary/10 text-primary font-medium'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent'
             }`}
           >
             {item.label}
@@ -40,7 +40,7 @@ function SettingsContent() {
       </nav>
 
       <div className="flex-1 overflow-y-auto p-8">
-        <h1 className="text-lg font-semibold mb-6">{NAV.find((n) => n.id === section)?.label}</h1>
+        <h1 className="text-lg font-semibold tracking-tight mb-6">{NAV.find((n) => n.id === section)?.label}</h1>
 
         {section === 'llm' && (
           <LLMSettings

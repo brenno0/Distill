@@ -50,8 +50,8 @@ const FolderNode = memo(function FolderNode({
     <li ref={setRef}>
       <div
         className={cn(
-          'group flex items-center gap-1 rounded-md px-2 py-1.5 transition-all cursor-grab active:cursor-grabbing',
-          isSelected ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50',
+          'group relative flex items-center gap-1 rounded-md px-2 py-1.5 transition-all cursor-grab active:cursor-grabbing',
+          isSelected ? 'bg-primary/10 text-foreground' : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground',
           isOver && 'bg-primary/20 ring-1 ring-primary ring-inset scale-[1.02]',
           isDragging && 'opacity-30',
         )}
@@ -59,6 +59,9 @@ const FolderNode = memo(function FolderNode({
         {...listeners}
         {...attributes}
       >
+        {isSelected && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-r-full" />
+        )}
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onSelect(folder.id) }}
@@ -178,9 +181,9 @@ export function FolderTreeSidebar({
   draggingFolderId,
 }: FolderTreeSidebarProps) {
   return (
-    <aside className="flex h-full min-h-0 w-72 flex-col border-r border-border/80 px-3 py-4">
+    <aside className="flex h-full min-h-0 w-56 flex-col border-r border-border px-3 py-4">
       <div className="mb-3 flex items-center justify-between px-1">
-        <h2 className="text-sm font-semibold text-muted-foreground">Folders</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Folders</h2>
         <Button
           type="button"
           variant="ghost"

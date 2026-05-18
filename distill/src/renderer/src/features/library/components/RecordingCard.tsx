@@ -72,6 +72,20 @@ export const RecordingCard = memo(function RecordingCard({
     onRenameDialog(recording.id, displayName)
   }
 
+  const thumbnailBg = {
+    completed: 'bg-emerald-500/10',
+    processing: 'bg-yellow-500/10',
+    pending: 'bg-yellow-500/10',
+    failed: 'bg-red-500/10',
+  }[recording.status ?? ''] ?? 'bg-muted/50'
+
+  const thumbnailIcon = {
+    completed: <Play className="h-5 w-5 text-emerald-400/70" />,
+    processing: <Play className="h-5 w-5 text-yellow-400/70" />,
+    pending: <Play className="h-5 w-5 text-yellow-400/70" />,
+    failed: <Play className="h-5 w-5 text-red-400/70" />,
+  }[recording.status ?? ''] ?? <Play className="h-5 w-5 text-muted-foreground" />
+
   const thumbnail = recording.thumbnail_url && !thumbnailFailed ? (
     <img
       src={recording.thumbnail_url}
@@ -80,8 +94,8 @@ export const RecordingCard = memo(function RecordingCard({
       onError={() => setThumbnailFailed(true)}
     />
   ) : (
-    <div className="h-full w-full bg-muted flex items-center justify-center">
-      <Play className="h-5 w-5 text-muted-foreground" />
+    <div className={`h-full w-full flex items-center justify-center ${thumbnailBg}`}>
+      {thumbnailIcon}
     </div>
   )
 
@@ -104,22 +118,22 @@ export const RecordingCard = memo(function RecordingCard({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white/10"
+        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-accent text-muted-foreground hover:text-foreground"
         onClick={handleRename}
         title="Rename"
       >
-        <Pencil className="h-3.5 w-3.5 text-white/60" />
+        <Pencil className="h-3.5 w-3.5" />
       </Button>
       <Button
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/30"
+        className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
         onClick={handleDelete}
         disabled={isDeleting}
         title="Delete"
       >
-        <Trash2 className="h-3.5 w-3.5 text-white/60" />
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </div>
   )

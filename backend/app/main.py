@@ -33,13 +33,12 @@ app.include_router(llm.router,          prefix="/api/v1/llm",          tags=["ll
 app.include_router(ws_router)
 
 
-@app.on_event("startup")
-async def startup():
-    Path(app_settings.temp_dir).mkdir(parents=True, exist_ok=True)
+async def _init_db() -> None:
+    import asyncio
     try:
         from app.db.migrations import run_migrations
         from app.db.app_settings_repository import app_settings_repo
-        run_migrations(app_settings.database_url)
+        await asyncio.to_thread(run_migrations, app_settings.database_url)
         persisted = await app_settings_repo.get()
         if persisted:
             if persisted.get("default_llm_provider"):
@@ -48,6 +47,13 @@ async def startup():
                 app_settings.default_llm_model = persisted["default_llm_model"]
     except Exception:
         pass  # DB not available — API still serves OpenAPI spec
+
+
+@app.on_event("startup")
+async def startup():
+    import asyncio
+    Path(app_settings.temp_dir).mkdir(parents=True, exist_ok=True)
+    asyncio.create_task(_init_db())  # non-blocking: server starts and answers /health immediately
 
 
 @app.on_event("shutdown")

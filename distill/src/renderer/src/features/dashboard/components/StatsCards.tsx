@@ -2,7 +2,8 @@ import { useRef, useEffect } from "react"
 import { animate, stagger } from "animejs"
 import { gsap } from "gsap"
 import { Mic, Clock, FileText, TrendingUp } from "lucide-react"
-import { Card, CardContent, CardHeader, CardDescription } from "@renderer/components/ui/card"
+import { Card, CardContent, CardHeader } from "@renderer/components/ui/card"
+import { cn } from "@renderer/lib/utils"
 
 interface Props {
   total: number
@@ -14,10 +15,34 @@ export function StatsCards({ total, hours, completed }: Props) {
   const cardsRef = useRef<HTMLDivElement[]>([])
 
   const stats = [
-    { title: "Total Recordings", value: String(total), icon: Mic },
-    { title: "Hours Recorded", value: String(hours), icon: Clock },
-    { title: "Transcriptions", value: String(completed), icon: FileText },
-    { title: "Key Insights", value: "—", icon: TrendingUp },
+    {
+      title: "Total Recordings",
+      value: String(total),
+      icon: Mic,
+      iconClass: "text-coral bg-coral/15",
+      accentClass: "border-l-coral",
+    },
+    {
+      title: "Hours Recorded",
+      value: String(hours),
+      icon: Clock,
+      iconClass: "text-teal-400 bg-teal-400/15",
+      accentClass: "border-l-teal-400",
+    },
+    {
+      title: "Transcriptions",
+      value: String(completed),
+      icon: FileText,
+      iconClass: "text-blue-400 bg-blue-400/15",
+      accentClass: "border-l-blue-400",
+    },
+    {
+      title: "Key Insights",
+      value: "—",
+      icon: TrendingUp,
+      iconClass: "text-green-400 bg-green-400/15",
+      accentClass: "border-l-green-400",
+    },
   ]
 
   useEffect(() => {
@@ -36,7 +61,9 @@ export function StatsCards({ total, hours, completed }: Props) {
     if (card) {
       gsap.to(card, {
         scale: isEntering ? 1.03 : 1,
-        boxShadow: isEntering ? "0 10px 30px rgba(0,0,0,0.12)" : "0 1px 3px rgba(0,0,0,0.1)",
+        boxShadow: isEntering
+          ? "0 10px 30px rgba(0,0,0,0.35)"
+          : "0 1px 3px rgba(0,0,0,0.2)",
         duration: 0.3,
         ease: "power2.out",
       })
@@ -48,19 +75,28 @@ export function StatsCards({ total, hours, completed }: Props) {
       {stats.map((stat, index) => (
         <Card
           key={stat.title}
-          className="bg-card border-border cursor-pointer"
+          className={cn(
+            "bg-card border-border border-l-2 overflow-hidden cursor-pointer",
+            stat.accentClass
+          )}
           ref={(el) => { if (el) cardsRef.current[index] = el }}
           onMouseEnter={() => handleHover(index, true)}
           onMouseLeave={() => handleHover(index, false)}
         >
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 pt-5">
             <div className="flex items-center justify-between">
-              <CardDescription className="text-muted-foreground">{stat.title}</CardDescription>
-              <stat.icon className="size-4 text-muted-foreground" />
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                {stat.title}
+              </p>
+              <span className={cn("p-1.5 rounded-md", stat.iconClass)}>
+                <stat.icon className="size-3.5" />
+              </span>
             </div>
           </CardHeader>
-          <CardContent>
-            <span className="text-3xl font-bold text-foreground">{stat.value}</span>
+          <CardContent className="pb-5">
+            <span className="text-4xl font-bold tracking-tight text-foreground">
+              {stat.value}
+            </span>
           </CardContent>
         </Card>
       ))}

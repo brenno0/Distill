@@ -44,21 +44,21 @@ export function RecordingPage() {
         <div className="text-center w-full" ref={titleRef}>
           {isRecording ? (
             <>
-              <h1 className="text-4xl font-bold text-foreground mb-2">Recording...</h1>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">Recording...</h1>
               {recordingTitle && (
                 <p className="text-lg text-muted-foreground">{recordingTitle}</p>
               )}
             </>
           ) : (
             <>
-              <h1 className="text-4xl font-bold text-foreground mb-4">Ready to Record</h1>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">Ready to Record</h1>
               <input
                 type="text"
                 value={recordingTitle}
                 onChange={(e) => setRecordingTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !isStarting && start(recordingTitle)}
                 placeholder="Recording name (optional)..."
-                className="w-full bg-muted/40 border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full bg-card border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/50 transition-all"
               />
             </>
           )}

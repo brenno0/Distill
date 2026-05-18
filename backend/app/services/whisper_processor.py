@@ -82,7 +82,17 @@ class WhisperProcessor:
             )
 
         audio = whisperx.load_audio(audio_path)
-        result = model.transcribe(audio, batch_size=settings.whisper_batch_size)
+        batch_size = settings.whisper_batch_size
+        try:
+            result = model.transcribe(audio, batch_size=batch_size)
+        except RuntimeError as e:
+            if "out of memory" not in str(e).lower():
+                raise
+            gc.collect()
+            if settings.whisper_device == "cuda":
+                import torch
+                torch.cuda.empty_cache()
+            result = model.transcribe(audio, batch_size=max(1, batch_size // 4))
         del model  # release CUDA ref before align/diarize/unload
         language = result.get("language", "pt")
 
