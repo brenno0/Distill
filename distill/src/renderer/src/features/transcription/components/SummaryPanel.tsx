@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react'
-import { BookOpen, Loader2, Clock } from 'lucide-react'
+import { memo, useMemo, useState } from 'react'
+import { BookOpen, Loader2, Clock, Download } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -9,16 +9,36 @@ export const SummaryPanel = memo(function SummaryPanel({
   summary,
   isCompleted,
   hideHeader = false,
+  title,
+  date,
 }: {
   summary?: string
   isCompleted: boolean
   hideHeader?: boolean
+  title?: string
+  date?: string
 }) {
+  const [exporting, setExporting] = useState(false)
+
   const readingTime = useMemo(() => {
     if (!summary) return null
     const words = summary.split(/\s+/).filter(Boolean).length
     return Math.max(1, Math.round(words / 200))
   }, [summary])
+
+  async function handleExport() {
+    if (!summary || exporting) return
+    setExporting(true)
+    try {
+      await window.electron.exportSummaryPDF({
+        markdown: summary,
+        title: title ?? 'Summary',
+        date,
+      })
+    } finally {
+      setExporting(false)
+    }
+  }
 
   return (
     <div className="flex flex-col h-full overflow-hidden border-t-2 border-t-teal-400/30">
@@ -29,12 +49,27 @@ export const SummaryPanel = memo(function SummaryPanel({
           </div>
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Summary</span>
         </div>
-        {readingTime && (
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
-            <Clock className="size-2.5" />
-            <span>{readingTime}m read</span>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {readingTime && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
+              <Clock className="size-2.5" />
+              <span>{readingTime}m read</span>
+            </div>
+          )}
+          {summary && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              title="Export as PDF"
+              className="flex items-center justify-center size-5 rounded text-muted-foreground/50 hover:text-teal-400 hover:bg-teal-400/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {exporting
+                ? <Loader2 className="size-3 animate-spin" />
+                : <Download className="size-3" />
+              }
+            </button>
+          )}
+        </div>
       </div>}
 
       <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hover">

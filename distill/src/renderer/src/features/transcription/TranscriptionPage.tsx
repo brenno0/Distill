@@ -42,7 +42,7 @@ function TranscriptionContent() {
   const speakerMap = (t.metadata as any)?.speaker_map as Record<string, string> | undefined
   const audioPath = t.audio_path as string | undefined
   const transcriptProps = { segments, fullText: t.text, title, transcriptionId: id, audioPath, speakerMap, status, progress, transcriptionType, errorMessage, errorLog, onRetry: retry, isRetrying }
-  const summaryProps   = { summary: t.summary ?? undefined, isCompleted: t.status === 'completed' }
+  const summaryProps   = { summary: t.summary ?? undefined, isCompleted: t.status === 'completed', title, date: t.created_at as string | undefined }
 
   return (
     <div className="flex flex-col h-full min-h-0">

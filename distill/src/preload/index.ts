@@ -6,4 +6,6 @@ contextBridge.exposeInMainWorld('electron', {
   onBackendFatal: (cb: () => void) =>
     ipcRenderer.on('backend:fatal', () => cb()),
   getBackendPort: () => ipcRenderer.invoke('backend:port'),
+  exportSummaryPDF: (data: { markdown: string; title: string; date?: string }) =>
+    ipcRenderer.invoke('export-summary-pdf', data),
 })
